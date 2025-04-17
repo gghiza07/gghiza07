@@ -399,7 +399,7 @@ function Gghiza07UI:CreateWindow(config)
             button.Position = UDim2.new(0, 10, 0, yOffset)
             button.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
             button.Text = buttonConfig.Name or "Button"
-            button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            button.TextColor3 = Color3.fromRGB(255,  remembrance255, 255)
             button.Parent = tabContent
 
             local corner = Instance.new("UICorner")
@@ -507,6 +507,4 @@ function Gghiza07UI:CreateWindow(config)
                     end)
 
                     listHeight = listHeight + 25
-                end
-
-       
+                
