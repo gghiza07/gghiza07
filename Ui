@@ -6,8 +6,8 @@ local HttpService = game:GetService("HttpService")
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Path for saving settings locally (similar to Rayfield's structure)
-local SETTINGS_FOLDER = "storage/emulator/0/" .. game.PlaceId .. "/workspace/Gghiza07UISettings"
+-- Path for saving settings locally
+local SETTINGS_FOLDER = "storage/Gghiza07UISettings"
 local SETTINGS_FILE = SETTINGS_FOLDER .. "/settingsconfig.rfld"
 
 -- ฟังก์ชันหลักสำหรับสร้าง Window
@@ -290,7 +290,7 @@ function Gghiza07UI:CreateWindow(config)
             switchTab()
         end
 
-        -- ตัวนับตำแหน่งสำหรับ Toggle และ Button
+        -- ตัวนับตำแหน่งสำหรับ Toggle, Button, Dropdown, Input, Slider
         local yOffset = 0
 
         -- ฟังก์ชันสร้าง Toggle
@@ -427,10 +427,86 @@ function Gghiza07UI:CreateWindow(config)
             tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
         end
 
-        return tab
-    end
+        -- ฟังก์ชันสร้าง Dropdown
+        function tab:CreateDropdown(dropdownConfig)
+            local dropdown = {}
+            local dropdownFrame = Instance.new("Frame")
+            dropdownFrame.Size = UDim2.new(1, 0, 0, 50)
+            dropdownFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            dropdownFrame.BackgroundTransparency = 1
+            dropdownFrame.Parent = tabContent
 
-    return window
-end
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, 0, 1, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = dropdownConfig.Name or "Dropdown"
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = dropdownFrame
 
-return Gghiza07UI
+            local dropdownButton = Instance.new("TextButton")
+            dropdownButton.Size = UDim2.new(0, 100, 0, 25)
+            dropdownButton.Position = UDim2.new(0.85, -50, 0.25, 0)
+            dropdownButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+            dropdownButton.Text = dropdownConfig.Default or "Select"
+            dropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            dropdownButton.Parent = dropdownFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = dropdownButton
+
+            local dropdownList = Instance.new("ScrollingFrame")
+            dropdownList.Size = UDim2.new(0, 100, 0, 0)
+            dropdownList.Position = UDim2.new(0.85, -50, 0.25, 25)
+            dropdownList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            dropdownList.BackgroundTransparency = 0
+            dropdownList.Visible = false
+            dropdownList.ScrollBarThickness = 5
+            dropdownList.Parent = dropdownFrame
+
+            local uiListLayout = Instance.new("UIListLayout")
+            uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            uiListLayout.Parent = dropdownList
+
+            local dropdownFlag = dropdownConfig.Flag or dropdownConfig.Name or "UnnamedDropdown"
+            local selectedOption = toggleStates[dropdownFlag] or dropdownConfig.Default or "Select"
+
+            dropdownButton.Text = selectedOption
+
+            local function updateDropdownList()
+                for _, child in ipairs(dropdownList:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        child:Destroy()
+                    end
+                end
+
+                local listHeight = 0
+                for i, option in ipairs(dropdownConfig.Options or {}) do
+                    local optionButton = Instance.new("TextButton")
+                    optionButton.Size = UDim2.new(1, 0, 0, 25)
+                    optionButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+                    optionButton.Text = tostring(option)
+                    optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    optionButton.Parent = dropdownList
+
+                    local cornerOption = Instance.new("UICorner")
+                    cornerOption.CornerRadius = UDim.new(0, 5)
+                    cornerOption.Parent = optionButton
+
+                    optionButton.MouseButton1Click:Connect(function()
+                        selectedOption = option
+                        dropdownButton.Text = selectedOption
+                        toggleStates[dropdownFlag] = selectedOption
+                        saveToggleStates()
+                        dropdownList.Visible = false
+                        if dropdownConfig.Callback then
+                            dropdownConfig.Callback(selectedOption)
+                        end
+                    end)
+
+                    listHeight = listHeight + 25
+                end
+
+  
