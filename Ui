@@ -507,4 +507,174 @@ function Gghiza07UI:CreateWindow(config)
                     end)
 
                     listHeight = listHeight + 25
-                
+                                end
+
+                dropdownList.CanvasSize = UDim2.new(0, 0, 0, listHeight)
+                dropdownList.Size = UDim2.new(0, 100, 0, math.min(listHeight, 100))
+            end
+
+            updateDropdownList()
+
+            dropdownButton.MouseButton1Click:Connect(function()
+                dropdownList.Visible = not dropdownList.Visible
+            end)
+
+            yOffset = yOffset + 60
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
+            return dropdown
+        end
+
+        -- ฟังก์ชันสร้าง Input
+        function tab:CreateInput(inputConfig)
+            local input = {}
+            local inputFrame = Instance.new("Frame")
+            inputFrame.Size = UDim2.new(1, 0, 0, 50)
+            inputFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            inputFrame.BackgroundTransparency = 1
+            inputFrame.Parent = tabContent
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, 0, 1, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = inputConfig.Name or "Input"
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = inputFrame
+
+            local textBox = Instance.new("TextBox")
+            textBox.Size = UDim2.new(0, 100, 0, 25)
+            textBox.Position = UDim2.new(0.85, -50, 0.25, 0)
+            textBox.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+            textBox.Text = inputConfig.Default or ""
+            textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+            textBox.ClearTextOnFocus = false
+            textBox.Parent = inputFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = textBox
+
+            local inputFlag = inputConfig.Flag or inputConfig.Name or "UnnamedInput"
+            textBox.Text = toggleStates[inputFlag] or inputConfig.Default or ""
+
+            textBox.FocusLost:Connect(function(enterPressed)
+                if enterPressed then
+                    toggleStates[inputFlag] = textBox.Text
+                    saveToggleStates()
+                    if inputConfig.Callback then
+                        inputConfig.Callback(textBox.Text)
+                    end
+                end
+            end)
+
+            yOffset = yOffset + 60
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
+            return input
+        end
+
+        -- ฟังก์ชันสร้าง Slider
+        function tab:CreateSlider(sliderConfig)
+            local slider = {}
+            local sliderFrame = Instance.new("Frame")
+            sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+            sliderFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            sliderFrame.BackgroundTransparency = 1
+            sliderFrame.Parent = tabContent
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, 0, 0, 25)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = sliderConfig.Name or "Slider"
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = sliderFrame
+
+            local valueLabel = Instance.new("TextLabel")
+            valueLabel.Size = UDim2.new(0, 50, 0, 25)
+            valueLabel.Position = UDim2.new(0.85, 0, 0, 0)
+            valueLabel.BackgroundTransparency = 1
+            valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            valueLabel.TextScaled = true
+            valueLabel.Parent = sliderFrame
+
+            local sliderBar = Instance.new("Frame")
+            sliderBar.Size = UDim2.new(0, 200, 0, 10)
+            sliderBar.Position = UDim2.new(0, 10, 0, 30)
+            sliderBar.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+            sliderBar.Parent = sliderFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = sliderBar
+
+            local fill = Instance.new("Frame")
+            fill.Size = UDim2.new(0, 0, 1, 0)
+            fill.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+            fill.Parent = sliderBar
+
+            local cornerFill = Instance.new("UICorner")
+            cornerFill.CornerRadius = UDim.new(0, 5)
+            cornerFill.Parent = fill
+
+            local minValue = sliderConfig.Min or 0
+            local maxValue = sliderConfig.Max or 100
+            local defaultValue = sliderConfig.Default or minValue
+            local sliderFlag = sliderConfig.Flag or sliderConfig.Name or "UnnamedSlider"
+
+            local currentValue = toggleStates[sliderFlag] or defaultValue
+            currentValue = math.clamp(currentValue, minValue, maxValue)
+
+            local function updateSlider()
+                local percentage = (currentValue - minValue) / (maxValue - minValue)
+                fill.Size = UDim2.new(percentage, 0, 1, 0)
+                valueLabel.Text = tostring(math.floor(currentValue))
+                toggleStates[sliderFlag] = currentValue
+                saveToggleStates()
+                if sliderConfig.Callback then
+                    sliderConfig.Callback(currentValue)
+                end
+            end
+
+            updateSlider()
+
+            local dragging = false
+            sliderBar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true
+                end
+            end)
+
+            sliderBar.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = false
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local mousePos = input.Position.X
+                    local sliderPos = sliderBar.AbsolutePosition.X
+                    local sliderWidth = sliderBar.AbsoluteSize.X
+                    local percentage = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
+                    currentValue = minValue + (maxValue - minValue) * percentage
+                    updateSlider()
+                end
+            end)
+
+            yOffset = yOffset + 60
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
+            return slider
+        end
+
+        return tab
+    end
+
+    return window
+end
+
+return Gghiza07UI
