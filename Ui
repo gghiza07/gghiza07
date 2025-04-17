@@ -2,12 +2,12 @@
 local Gghiza07UI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ตั้งค่า DataStore สำหรับบันทึกสถานะ
-local SettingsDataStore = DataStoreService:GetDataStore("Gghiza07UISettings")
+-- Reference to the RemoteEvent
+local ToggleStateEvent = ReplicatedStorage:WaitForChild("ToggleStateEvent")
 
 -- ฟังก์ชันหลักสำหรับสร้าง Window
 function Gghiza07UI:CreateWindow(config)
@@ -151,7 +151,6 @@ function Gghiza07UI:CreateWindow(config)
 
     local function toggleUI()
         screenGui.Enabled = not screenGui.Enabled
-        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
         if screenGui.Enabled then
             toggleButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
             toggleButton.Text = "ON"
@@ -182,30 +181,25 @@ function Gghiza07UI:CreateWindow(config)
     local saveSettings = config.SaveSetting or false
     local toggleStates = {} -- เก็บสถานะของ Toggle ทั้งหมด
 
-    -- โหลดสถานะจาก DataStore ถ้า SaveSetting = true
+    -- โหลดสถานะจากเซิร์ฟเวอร์ ถ้า SaveSetting = true
     if saveSettings then
-        local success, loadedData = pcall(function()
-            return SettingsDataStore:GetAsync(player.UserId .. "_ToggleStates")
-        end)
-        if success and loadedData then
-            toggleStates = loadedData
-            print("Loaded toggle states:", toggleStates)
-        else
-            print("No saved toggle states found or failed to load")
-        end
+        ToggleStateEvent:FireServer("Load")
     end
 
-    -- ฟังก์ชันบันทึกสถานะ
+    -- รับข้อมูลจากเซิร์ฟเวอร์เมื่อโหลดสถานะ
+    ToggleStateEvent.OnClientEvent:Connect(function(action, loadedData)
+        if action == "LoadResponse" and loadedData then
+            toggleStates = loadedData
+            print("Loaded toggle states from server:", toggleStates)
+        else
+            print("No saved toggle states received from server")
+        end
+    end)
+
+    -- ฟังก์ชันบันทึกสถานะไปยังเซิร์ฟเวอร์
     local function saveToggleStates()
         if saveSettings then
-            local success, err = pcall(function()
-                SettingsDataStore:SetAsync(player.UserId .. "_ToggleStates", toggleStates)
-            end)
-            if success then
-                print("Saved toggle states:", toggleStates)
-            else
-                warn("Failed to save toggle states:", err)
-            end
+            ToggleStateEvent:FireServer("Save", toggleStates)
         end
     end
 
