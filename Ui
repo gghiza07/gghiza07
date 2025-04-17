@@ -1,0 +1,331 @@
+-- UI Library for Gghiza07UI
+local Gghiza07UI = {}
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ฟังก์ชันหลักสำหรับสร้าง Window
+function Gghiza07UI:CreateWindow(config)
+    local window = {}
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = config.Name or "Gghiza07UI"
+    screenGui.Parent = playerGui
+    screenGui.Enabled = true
+
+    -- Main Content
+    local mainContent = Instance.new("Frame")
+    mainContent.Size = UDim2.new(1, 0, 1, 0)
+    mainContent.Position = UDim2.new(0, 0, 0, 0)
+    mainContent.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    mainContent.BackgroundTransparency = 0.3
+    mainContent.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainContent
+
+    -- เพิ่มชื่อค่ายที่มุมซ้ายบน
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(0, 200, 0, 30)
+    titleLabel.Position = UDim2.new(0, 10, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = config.Name or "Gghiza07UI"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextScaled = true
+    titleLabel.Parent = mainContent
+
+    -- เพิ่มการลาก UI
+    local draggingUI = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    mainContent.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingUI = true
+            dragStart = input.Position
+            startPos = mainContent.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingUI = false
+                end
+            end)
+        end
+    end)
+
+    mainContent.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and draggingUI then
+            local delta = input.Position - dragStart
+            mainContent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- Tabs Frame
+    local tabsFrame = Instance.new("Frame")
+    tabsFrame.Size = UDim2.new(1, -20, 0, 60)
+    tabsFrame.Position = UDim2.new(0, 10, 0, 50)
+    tabsFrame.BackgroundColor3 = Color3.fromRGB(42, 42, 42)
+    tabsFrame.Parent = mainContent
+
+    local cornerTabs = Instance.new("UICorner")
+    cornerTabs.CornerRadius = UDim.new(0, 5)
+    cornerTabs.Parent = tabsFrame
+
+    -- Toggle UI Button
+    local toggleGui = Instance.new("ScreenGui")
+    toggleGui.Name = "ToggleGui"
+    toggleGui.Parent = playerGui
+    toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0, 50, 0, 50)
+    toggleButton.Position = UDim2.new(0, 10, 1, -60)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+    toggleButton.Text = "ON"
+    toggleButton.TextScaled = true
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.ZIndex = 10
+    toggleButton.Parent = toggleGui
+
+    local cornerToggle = Instance.new("UICorner")
+    cornerToggle.CornerRadius = UDim.new(0, 15)
+    cornerToggle.Parent = toggleButton
+
+    local draggingToggle = false
+    local toggleDragInput
+    local toggleDragStart
+    local toggleStartPos
+
+    toggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingToggle = true
+            toggleDragStart = input.Position
+            toggleStartPos = toggleButton.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingToggle = false
+                end
+            end)
+        end
+    end)
+
+    toggleButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            toggleDragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == toggleDragInput and draggingToggle then
+            local delta = input.Position - toggleDragStart
+            toggleButton.Position = UDim2.new(toggleStartPos.X.Scale, toggleStartPos.X.Offset + delta.X, toggleStartPos.Y.Scale, toggleStartPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    local function toggleUI()
+        screenGui.Enabled = not screenGui.Enabled
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+        if screenGui.Enabled then
+            toggleButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+            toggleButton.Text = "ON"
+        else
+            toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+            toggleButton.Text = "OFF"
+        end
+    end
+
+    local lastToggleTime = 0
+    local debounceTime = 0.5
+
+    local function onToggleActivated()
+        local currentTime = tick()
+        if currentTime - lastToggleTime >= debounceTime then
+            toggleUI()
+            lastToggleTime = currentTime
+        end
+    end)
+
+    toggleButton.MouseButton1Click:Connect(onToggleActivated)
+    toggleButton.TouchTap:Connect(onToggleActivated)
+
+    -- ฟังก์ชันสร้าง Tab
+    function window:CreateTab(tabConfig)
+        local tab = {}
+        local tabName = tabConfig.Name or "Tab"
+        local tabButton = Instance.new("TextButton")
+        tabButton.Size = UDim2.new(0, 110, 0, 40)
+        tabButton.Position = UDim2.new(0, 10 + (#tabsFrame:GetChildren() - 1) * 120, 0, 10)
+        tabButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+        tabButton.Text = tabName
+        tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tabButton.Parent = tabsFrame
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 5)
+        corner.Parent = tabButton
+
+        local tabContent = Instance.new("ScrollingFrame")
+        tabContent.Size = UDim2.new(1, -20, 1, -110)
+        tabContent.Position = UDim2.new(0, 10, 0, 110)
+        tabContent.BackgroundTransparency = 1
+        tabContent.CanvasSize = UDim2.new(0, 0, 2, 0)
+        tabContent.ScrollBarThickness = 5
+        tabContent.Parent = mainContent
+        tabContent.Visible = false
+
+        local tabButtons = tabsFrame:GetChildren()
+        local tabContents = mainContent:GetChildren()
+
+        tabButton.MouseEnter:Connect(function()
+            if tabButton.BackgroundColor3 ~= Color3.fromRGB(0, 123, 255) then
+                tabButton.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+            end
+        end)
+
+        tabButton.MouseLeave:Connect(function()
+            if tabButton.BackgroundColor3 ~= Color3.fromRGB(0, 123, 255) then
+                tabButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+            end
+        end)
+
+        local function switchTab()
+            for _, content in pairs(tabContents) do
+                if content:IsA("ScrollingFrame") then
+                    content.Visible = false
+                end
+            end
+            for _, btn in pairs(tabButtons) do
+                if btn:IsA("TextButton") then
+                    btn.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+                end
+            end
+            tabContent.Visible = true
+            tabButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+        end
+
+        tabButton.MouseButton1Click:Connect(switchTab)
+        tabButton.TouchTap:Connect(switchTab)
+
+        -- ทำให้ Tab แรกแสดงผลทันที
+        if #tabButtons == 1 then
+            switchTab()
+        end
+
+        -- ตัวนับตำแหน่งสำหรับ Toggle และ Button
+        local yOffset = 0
+
+        -- ฟังก์ชันสร้าง Toggle
+        function tab:CreateToggle(toggleConfig)
+            local toggle = {}
+            local toggleFrame = Instance.new("Frame")
+            toggleFrame.Size = UDim2.new(1, 0, 0, 50)
+            toggleFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            toggleFrame.BackgroundTransparency = 1
+            toggleFrame.Parent = tabContent
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, 0, 1, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = toggleConfig.Name or "Toggle"
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = toggleFrame
+
+            local toggleButton = Instance.new("TextButton")
+            toggleButton.Size = UDim2.new(0, 50, 0, 25)
+            toggleButton.Position = UDim2.new(0.85, 0, 0.25, 0)
+            toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+            toggleButton.Text = ""
+            toggleButton.Parent = toggleFrame
+
+            local toggleCircle = Instance.new("Frame")
+            toggleCircle.Size = UDim2.new(0, 20, 0, 20)
+            toggleCircle.Position = UDim2.new(0, 2, 0, 2)
+            toggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            toggleCircle.BorderSizePixel = 0
+            toggleCircle.Parent = toggleButton
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(1, 0)
+            corner.Parent = toggleButton
+            corner:Clone().Parent = toggleCircle
+
+            local isToggled = false
+            local function toggle()
+                isToggled = not isToggled
+                print("Toggle state changed to: " .. tostring(isToggled)) -- เพิ่มการดีบัก
+                local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+                if isToggled then
+                    TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0.5, 2, 0, 2)}):Play()
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80) -- สีเขียวเมื่อเปิด
+                    print("Set Toggle color to green")
+                else
+                    TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0, 2, 0, 2)}):Play()
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- สีขาวเมื่อปิด
+                    print("Set Toggle color to white")
+                end
+                if toggleConfig.Callfunction then
+                    toggleConfig.Callfunction(isToggled)
+                end
+            end
+
+            toggleButton.MouseButton1Click:Connect(toggle)
+            toggleButton.TouchTap:Connect(toggle)
+
+            yOffset = yOffset + 60
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
+            return toggle
+        end
+
+        -- ฟังก์ชันสร้าง Button
+        function tab:CreateButton(buttonConfig)
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(0, 140, 0, 50)
+            button.Position = UDim2.new(0, 10, 0, yOffset)
+            button.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+            button.Text = buttonConfig.Name or "Button"
+            button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            button.Parent = tabContent
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = button
+
+            button.MouseEnter:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(0, 86, 179)
+            end)
+
+            button.MouseLeave:Connect(function()
+                button.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+            end)
+
+            local function activate()
+                if buttonConfig.Callback then
+                    buttonConfig.Callback()
+                end
+            end
+
+            button.MouseButton1Click:Connect(activate)
+            button.TouchTap:Connect(activate)
+
+            yOffset = yOffset + 60
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+        end
+
+        return tab
+    end
+
+    return window
+end
+
+return Gghiza07UI
