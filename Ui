@@ -260,26 +260,37 @@ function Gghiza07UI:CreateWindow(config)
             corner:Clone().Parent = toggleCircle
 
             local isToggled = false
+            local isTweening = false -- ตัวแปรเพื่อป้องกันการ Tween ซ้ำ
+
             local function toggle()
+                if isTweening then return end -- ป้องกันการเรียกซ้ำขณะ Tween
+                isTweening = true
                 isToggled = not isToggled
                 print("Toggle state changed to: " .. tostring(isToggled))
+
                 local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
                 local tween
                 if isToggled then
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80) -- ตั้งค่าสีทันที
+                    print("Set Toggle color to green immediately")
                     tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0.5, 2, 0, 2)})
                 else
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- ตั้งค่าสีทันที
+                    print("Set Toggle color to white immediately")
                     tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0, 2, 0, 2)})
                 end
                 tween:Play()
                 tween.Completed:Connect(function()
                     if isToggled then
-                        toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
-                        print("Set Toggle color to green after tween")
+                        toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80) -- ยืนยันสีหลัง Tween
+                        print("Confirmed Toggle color to green after tween")
                     else
-                        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-                        print("Set Toggle color to white after tween")
+                        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- ยืนยันสีหลัง Tween
+                        print("Confirmed Toggle color to white after tween")
                     end
+                    isTweening = false -- รีเซ็ตสถานะ Tween
                 end)
+
                 if toggleConfig.Callfunction then
                     toggleConfig.Callfunction(isToggled)
                 end
