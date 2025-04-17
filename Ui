@@ -2,12 +2,13 @@
 local Gghiza07UI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Reference to the RemoteEvent
-local ToggleStateEvent = ReplicatedStorage:WaitForChild("ToggleStateEvent")
+-- Path for saving settings locally (similar to Rayfield's structure)
+local SETTINGS_FOLDER = "storage/emulator/0/" .. game.PlaceId .. "/workspace/Gghiza07UISettings"
+local SETTINGS_FILE = SETTINGS_FOLDER .. "/settingsconfig.rfld"
 
 -- ฟังก์ชันหลักสำหรับสร้าง Window
 function Gghiza07UI:CreateWindow(config)
@@ -151,6 +152,7 @@ function Gghiza07UI:CreateWindow(config)
 
     local function toggleUI()
         screenGui.Enabled = not screenGui.Enabled
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
         if screenGui.Enabled then
             toggleButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
             toggleButton.Text = "ON"
@@ -181,26 +183,51 @@ function Gghiza07UI:CreateWindow(config)
     local saveSettings = config.SaveSetting or false
     local toggleStates = {} -- เก็บสถานะของ Toggle ทั้งหมด
 
-    -- โหลดสถานะจากเซิร์ฟเวอร์ ถ้า SaveSetting = true
-    if saveSettings then
-        ToggleStateEvent:FireServer("Load")
+    -- ฟังก์ชันตรวจสอบและสร้างโฟลเดอร์ถ้ายังไม่มี
+    local function ensureFolderExists()
+        if not isfolder(SETTINGS_FOLDER) then
+            makefolder(SETTINGS_FOLDER)
+            print("Created settings folder: " .. SETTINGS_FOLDER)
+        end
     end
 
-    -- รับข้อมูลจากเซิร์ฟเวอร์เมื่อโหลดสถานะ
-    ToggleStateEvent.OnClientEvent:Connect(function(action, loadedData)
-        if action == "LoadResponse" and loadedData then
-            toggleStates = loadedData
-            print("Loaded toggle states from server:", toggleStates)
+    -- ฟังก์ชันโหลดสถานะจากไฟล์
+    local function loadToggleStates()
+        ensureFolderExists()
+        if isfile(SETTINGS_FILE) then
+            local success, data = pcall(function()
+                return HttpService:JSONDecode(readfile(SETTINGS_FILE))
+            end)
+            if success and data then
+                print("Loaded toggle states from file:", data)
+                return data
+            else
+                print("Failed to load toggle states from file or no data found")
+            end
         else
-            print("No saved toggle states received from server")
+            print("No saved toggle states file found")
         end
-    end)
+        return {}
+    end
 
-    -- ฟังก์ชันบันทึกสถานะไปยังเซิร์ฟเวอร์
+    -- ฟังก์ชันบันทึกสถานะลงไฟล์
     local function saveToggleStates()
         if saveSettings then
-            ToggleStateEvent:FireServer("Save", toggleStates)
+            ensureFolderExists()
+            local success, err = pcall(function()
+                writefile(SETTINGS_FILE, HttpService:JSONEncode(toggleStates))
+            end)
+            if success then
+                print("Saved toggle states to file:", toggleStates)
+            else
+                warn("Failed to save toggle states to file:", err)
+            end
         end
+    end
+
+    -- โหลดสถานะจากไฟล์ ถ้า SaveSetting = true
+    if saveSettings then
+        toggleStates = loadToggleStates()
     end
 
     -- ฟังก์ชันสร้าง Tab
