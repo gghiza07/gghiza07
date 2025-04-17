@@ -8,6 +8,21 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- ฟังก์ชันหลักสำหรับสร้าง Window
 function Gghiza07UI:CreateWindow(config)
     local window = {}
+
+    -- ตรวจสอบและลบ UI เก่าถ้ามีอยู่
+    local existingScreenGui = playerGui:FindFirstChild(config.Name or "Gghiza07UI")
+    if existingScreenGui then
+        print("Found existing UI, destroying: " .. existingScreenGui.Name)
+        existingScreenGui:Destroy()
+    end
+
+    local existingToggleGui = playerGui:FindFirstChild("ToggleGui")
+    if existingToggleGui then
+        print("Found existing ToggleGui, destroying: " .. existingToggleGui.Name)
+        existingToggleGui:Destroy()
+    end
+
+    -- สร้าง ScreenGui ใหม่
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = config.Name or "Gghiza07UI"
     screenGui.Parent = playerGui
@@ -219,7 +234,7 @@ function Gghiza07UI:CreateWindow(config)
             switchTab()
         end
 
-        -- ตัวนับตำแหน่งสำหรับ Toggle และ Button
+        -- ตัวนับตำแหน่งสำหรับ Toggle, Button, Dropdown, Slider, และ Input
         local yOffset = 0
 
         -- ฟังก์ชันสร้าง Toggle
@@ -340,10 +355,147 @@ function Gghiza07UI:CreateWindow(config)
             tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
         end
 
-        return tab
-    end
+        -- ฟังก์ชันสร้าง Dropdown
+        function tab:CreateDropdown(dropdownConfig)
+            local dropdown = {}
+            local dropdownFrame = Instance.new("Frame")
+            dropdownFrame.Size = UDim2.new(1, 0, 0, 50)
+            dropdownFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            dropdownFrame.BackgroundTransparency = 1
+            dropdownFrame.Parent = tabContent
 
-    return window
-end
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, 0, 1, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = dropdownConfig.Name or "Dropdown"
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = dropdownFrame
 
-return Gghiza07UI
+            local dropdownButton = Instance.new("TextButton")
+            dropdownButton.Size = UDim2.new(0, 100, 0, 30)
+            dropdownButton.Position = UDim2.new(0.7, 0, 0.15, 0)
+            dropdownButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+            dropdownButton.Text = dropdownConfig.Default or "Select"
+            dropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            dropdownButton.TextScaled = true
+            dropdownButton.Parent = dropdownFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = dropdownButton
+
+            local dropdownList = Instance.new("Frame")
+            dropdownList.Size = UDim2.new(0, 100, 0, 0)
+            dropdownList.Position = UDim2.new(0.7, 0, 0, 40)
+            dropdownList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            dropdownList.Visible = false
+            dropdownList.Parent = dropdownFrame
+
+            local cornerList = Instance.new("UICorner")
+            cornerList.CornerRadius = UDim.new(0, 5)
+            cornerList.Parent = dropdownList
+
+            local listLayout = Instance.new("UIListLayout")
+            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            listLayout.Parent = dropdownList
+
+            local options = dropdownConfig.Options or {}
+            local isOpen = false
+
+            local function updateList()
+                dropdownList.Size = UDim2.new(0, 100, 0, #options * 30)
+                for _, option in ipairs(options) do
+                    local optionButton = Instance.new("TextButton")
+                    optionButton.Size = UDim2.new(1, 0, 0, 30)
+                    optionButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+                    optionButton.Text = tostring(option)
+                    optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    optionButton.TextScaled = true
+                    optionButton.Parent = dropdownList
+
+                    local cornerOption = Instance.new("UICorner")
+                    cornerOption.CornerRadius = UDim.new(0, 5)
+                    cornerOption.Parent = optionButton
+
+                    optionButton.MouseButton1Click:Connect(function()
+                        dropdownButton.Text = tostring(option)
+                        dropdownList.Visible = false
+                        isOpen = false
+                        if dropdownConfig.Callback then
+                            dropdownConfig.Callback(option)
+                        end
+                    end)
+                end
+            end
+
+            updateList()
+
+            dropdownButton.MouseButton1Click:Connect(function()
+                isOpen = not isOpen
+                dropdownList.Visible = isOpen
+            end)
+
+            yOffset = yOffset + 60
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
+            return dropdown
+        end
+
+        -- ฟังก์ชันสร้าง Slider
+        function tab:CreateSlider(sliderConfig)
+            local slider = {}
+            local sliderFrame = Instance.new("Frame")
+            sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+            sliderFrame.Position = UDim2.new(0, 0, 0, yOffset)
+            sliderFrame.BackgroundTransparency = 1
+            sliderFrame.Parent = tabContent
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, 0, 0.5, 0)
+            label.Position = UDim2.new(0, 10, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = sliderConfig.Name or "Slider"
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = sliderFrame
+
+            local valueLabel = Instance.new("TextLabel")
+            valueLabel.Size = UDim2.new(0.7, 0, 0.5, 0)
+            valueLabel.Position = UDim2.new(0, 10, 0.5, 0)
+            valueLabel.BackgroundTransparency = 1
+            valueLabel.Text = tostring(sliderConfig.Default or 0)
+            valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            valueLabel.TextXAlignment = Enum.TextXAlignment.Left
+            valueLabel.Parent = sliderFrame
+
+            local sliderBar = Instance.new("Frame")
+            sliderBar.Size = UDim2.new(0, 100, 0, 10)
+            sliderBar.Position = UDim2.new(0.7, 0, 0.4, 0)
+            sliderBar.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
+            sliderBar.Parent = sliderFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = sliderBar
+
+            local sliderFill = Instance.new("Frame")
+            sliderFill.Size = UDim2.new(0, 0, 1, 0)
+            sliderFill.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+            sliderFill.Parent = sliderBar
+
+            local cornerFill = Instance.new("UICorner")
+            cornerFill.CornerRadius = UDim.new(0, 5)
+            cornerFill.Parent = sliderFill
+
+            local minValue = sliderConfig.Min or 0
+            local maxValue = sliderConfig.Max or 100
+            local defaultValue = sliderConfig.Default or minValue
+            local currentValue = defaultValue
+
+            local function updateSlider(positionX)
+                local relativeX = math.clamp(positionX - sliderBar.AbsolutePosition.X, 0, sliderBar.AbsoluteSize.X)
+                local percentage = relativeX / sliderBar.AbsoluteSize.X
+                currentValue = minValue + (maxValue - minValue) * percentage
+                currentValue = math.floor(currentValue) -- ป
