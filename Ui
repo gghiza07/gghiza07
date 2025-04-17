@@ -151,7 +151,7 @@ function Gghiza07UI:CreateWindow(config)
             toggleUI()
             lastToggleTime = currentTime
         end
-    end)
+    end
 
     toggleButton.MouseButton1Click:Connect(onToggleActivated)
     toggleButton.TouchTap:Connect(onToggleActivated)
@@ -262,17 +262,24 @@ function Gghiza07UI:CreateWindow(config)
             local isToggled = false
             local function toggle()
                 isToggled = not isToggled
-                print("Toggle state changed to: " .. tostring(isToggled)) -- เพิ่มการดีบัก
+                print("Toggle state changed to: " .. tostring(isToggled))
                 local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+                local tween
                 if isToggled then
-                    TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0.5, 2, 0, 2)}):Play()
-                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80) -- สีเขียวเมื่อเปิด
-                    print("Set Toggle color to green")
+                    tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0.5, 2, 0, 2)})
                 else
-                    TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0, 2, 0, 2)}):Play()
-                    toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- สีขาวเมื่อปิด
-                    print("Set Toggle color to white")
+                    tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0, 2, 0, 2)})
                 end
+                tween:Play()
+                tween.Completed:Connect(function()
+                    if isToggled then
+                        toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+                        print("Set Toggle color to green after tween")
+                    else
+                        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+                        print("Set Toggle color to white after tween")
+                    end
+                end)
                 if toggleConfig.Callfunction then
                     toggleConfig.Callfunction(isToggled)
                 end
