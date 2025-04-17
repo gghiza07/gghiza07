@@ -156,13 +156,16 @@ function Gghiza07UI:CreateWindow(config)
     toggleButton.MouseButton1Click:Connect(onToggleActivated)
     toggleButton.TouchTap:Connect(onToggleActivated)
 
+    -- เก็บรายการ Tab และ Content
+    local tabList = {}
+
     -- ฟังก์ชันสร้าง Tab
     function window:CreateTab(tabConfig)
         local tab = {}
         local tabName = tabConfig.Name or "Tab"
         local tabButton = Instance.new("TextButton")
         tabButton.Size = UDim2.new(0, 110, 0, 40)
-        tabButton.Position = UDim2.new(0, 10 + (#tabsFrame:GetChildren() - 1) * 120, 0, 10)
+        tabButton.Position = UDim2.new(0, 10 + (#tabList * 120), 0, 10)
         tabButton.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
         tabButton.Text = tabName
         tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -181,8 +184,8 @@ function Gghiza07UI:CreateWindow(config)
         tabContent.Parent = mainContent
         tabContent.Visible = false
 
-        local tabButtons = tabsFrame:GetChildren()
-        local tabContents = mainContent:GetChildren()
+        -- เก็บ Tab และ Content ในตาราง
+        table.insert(tabList, {button = tabButton, content = tabContent})
 
         tabButton.MouseEnter:Connect(function()
             if tabButton.BackgroundColor3 ~= Color3.fromRGB(0, 123, 255) then
@@ -197,25 +200,22 @@ function Gghiza07UI:CreateWindow(config)
         end)
 
         local function switchTab()
-            for _, content in pairs(tabContents) do
-                if content:IsA("ScrollingFrame") then
-                    content.Visible = false
-                end
+            -- รีเซ็ตสถานะของทุก Tab
+            for _, tabData in ipairs(tabList) do
+                tabData.content.Visible = false
+                tabData.button.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
             end
-            for _, btn in pairs(tabButtons) do
-                if btn:IsA("TextButton") then
-                    btn.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
-                end
-            end
+            -- แสดง Tab ที่เลือก
             tabContent.Visible = true
             tabButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+            print("Switched to Tab: " .. tabName)
         end
 
         tabButton.MouseButton1Click:Connect(switchTab)
         tabButton.TouchTap:Connect(switchTab)
 
         -- ทำให้ Tab แรกแสดงผลทันที
-        if #tabButtons == 1 then
+        if #tabList == 1 then
             switchTab()
         end
 
@@ -260,10 +260,10 @@ function Gghiza07UI:CreateWindow(config)
             corner:Clone().Parent = toggleCircle
 
             local isToggled = false
-            local isTweening = false -- ตัวแปรเพื่อป้องกันการ Tween ซ้ำ
+            local isTweening = false
 
             local function toggle()
-                if isTweening then return end -- ป้องกันการเรียกซ้ำขณะ Tween
+                if isTweening then return end
                 isTweening = true
                 isToggled = not isToggled
                 print("Toggle state changed to: " .. tostring(isToggled))
@@ -271,24 +271,24 @@ function Gghiza07UI:CreateWindow(config)
                 local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
                 local tween
                 if isToggled then
-                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80) -- ตั้งค่าสีทันที
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
                     print("Set Toggle color to green immediately")
                     tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0.5, 2, 0, 2)})
                 else
-                    toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- ตั้งค่าสีทันที
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
                     print("Set Toggle color to white immediately")
                     tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0, 2, 0, 2)})
                 end
                 tween:Play()
                 tween.Completed:Connect(function()
                     if isToggled then
-                        toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80) -- ยืนยันสีหลัง Tween
+                        toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
                         print("Confirmed Toggle color to green after tween")
                     else
-                        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200) -- ยืนยันสีหลัง Tween
+                        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
                         print("Confirmed Toggle color to white after tween")
                     end
-                    isTweening = false -- รีเซ็ตสถานะ Tween
+                    isTweening = false
                 end)
 
                 if toggleConfig.Callfunction then
