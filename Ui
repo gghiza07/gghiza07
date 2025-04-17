@@ -7,7 +7,7 @@ local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Path for saving settings locally
-local SETTINGS_FOLDER = "storage/Gghiza07UISettings"
+local SETTINGS_FOLDER = "storage/emulator/0/" .. game.PlaceId .. "/workspace/Gghiza07UISettings"
 local SETTINGS_FILE = SETTINGS_FOLDER .. "/settingsconfig.rfld"
 
 -- ฟังก์ชันหลักสำหรับสร้าง Window
