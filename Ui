@@ -1,4 +1,3 @@
--- UI Library for Gghiza07UI
 local Gghiza07UI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -6,34 +5,27 @@ local HttpService = game:GetService("HttpService")
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ฟังก์ชันหลักสำหรับสร้าง Window
 function Gghiza07UI:CreateWindow(config)
     local window = {}
 
-    -- Dynamic settings folder based on config.Name
     local SETTINGS_FOLDER = "storage/" .. (config.Name or "Gghiza07UI")
     local SETTINGS_FILE = SETTINGS_FOLDER .. "/settingsconfig.rfld"
 
-    -- ตรวจสอบและลบ UI เก่าถ้ามีอยู่
     local existingScreenGui = playerGui:FindFirstChild(config.Name or "Gghiza07UI")
     if existingScreenGui then
-        print("Found existing UI, destroying: " .. existingScreenGui.Name)
         existingScreenGui:Destroy()
     end
 
     local existingToggleGui = playerGui:FindFirstChild("ToggleGui")
     if existingToggleGui then
-        print("Found existing ToggleGui, destroying: " .. existingToggleGui.Name)
         existingToggleGui:Destroy()
     end
 
-    -- สร้าง ScreenGui ใหม่
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = config.Name or "Gghiza07UI"
     screenGui.Parent = playerGui
     screenGui.Enabled = true
 
-    -- Main Content
     local mainContent = Instance.new("Frame")
     mainContent.Size = UDim2.new(1, 0, 1, 0)
     mainContent.Position = UDim2.new(0, 0, 0, 0)
@@ -45,7 +37,6 @@ function Gghiza07UI:CreateWindow(config)
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = mainContent
 
-    -- เพิ่มชื่อค่ายที่มุมซ้ายบน
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(0, 200, 0, 30)
     titleLabel.Position = UDim2.new(0, 10, 0, 10)
@@ -56,7 +47,6 @@ function Gghiza07UI:CreateWindow(config)
     titleLabel.TextScaled = true
     titleLabel.Parent = mainContent
 
-    -- เพิ่มการลาก UI
     local draggingUI = false
     local dragInput
     local dragStart
@@ -88,7 +78,6 @@ function Gghiza07UI:CreateWindow(config)
         end
     end)
 
-    -- Tabs Frame
     local tabsFrame = Instance.new("Frame")
     tabsFrame.Size = UDim2.new(1, -20, 0, 60)
     tabsFrame.Position = UDim2.new(0, 10, 0, 50)
@@ -99,7 +88,6 @@ function Gghiza07UI:CreateWindow(config)
     cornerTabs.CornerRadius = UDim.new(0, 5)
     cornerTabs.Parent = tabsFrame
 
-    -- Toggle UI Button
     local toggleGui = Instance.new("ScreenGui")
     toggleGui.Name = "ToggleGui"
     toggleGui.Parent = playerGui
@@ -176,22 +164,17 @@ function Gghiza07UI:CreateWindow(config)
     toggleButton.MouseButton1Click:Connect(onToggleActivated)
     toggleButton.TouchTap:Connect(onToggleActivated)
 
-    -- เก็บรายการ Tab และ Content
     local tabList = {}
 
-    -- เก็บสถานะสำหรับบันทึก
     local saveSettings = config.SaveSetting or false
-    local toggleStates = {} -- เก็บสถานะของ Toggle ทั้งหมด
+    local toggleStates = {}
 
-    -- ฟังก์ชันตรวจสอบและสร้างโฟลเดอร์ถ้ายังไม่มี
     local function ensureFolderExists()
         if not isfolder(SETTINGS_FOLDER) then
             makefolder(SETTINGS_FOLDER)
-            print("Created settings folder: " .. SETTINGS_FOLDER)
         end
     end
 
-    -- ฟังก์ชันโหลดสถานะจากไฟล์
     local function loadToggleStates()
         ensureFolderExists()
         if isfile(SETTINGS_FILE) then
@@ -199,38 +182,28 @@ function Gghiza07UI:CreateWindow(config)
                 return HttpService:JSONDecode(readfile(SETTINGS_FILE))
             end)
             if success and data then
-                print("Loaded toggle states from file:", data)
                 return data
-            else
-                print("Failed to load toggle states from file or no data found")
             end
-        else
-            print("No saved toggle states file found")
         end
         return {}
     end
 
-    -- ฟังก์ชันบันทึกสถานะลงไฟล์
     local function saveToggleStates()
         if saveSettings then
             ensureFolderExists()
             local success, err = pcall(function()
                 writefile(SETTINGS_FILE, HttpService:JSONEncode(toggleStates))
             end)
-            if success then
-                print("Saved toggle states to file:", toggleStates)
-            else
-                warn("Failed to save toggle states to file:", err)
+            if not success then
+                warn("Failed to save toggle states to file: " .. err)
             end
         end
     end
 
-    -- โหลดสถานะจากไฟล์ ถ้า SaveSetting = true
     if saveSettings then
         toggleStates = loadToggleStates()
     end
 
-    -- ฟังก์ชันสร้าง Tab
     function window:CreateTab(tabConfig)
         local tab = {}
         local tabName = tabConfig.Name or "Tab"
@@ -255,7 +228,6 @@ function Gghiza07UI:CreateWindow(config)
         tabContent.Parent = mainContent
         tabContent.Visible = false
 
-        -- เก็บ Tab และ Content ในตาราง
         table.insert(tabList, {button = tabButton, content = tabContent})
 
         tabButton.MouseEnter:Connect(function()
@@ -271,29 +243,23 @@ function Gghiza07UI:CreateWindow(config)
         end)
 
         local function switchTab()
-            -- รีเซ็ตสถานะของทุก Tab
             for _, tabData in ipairs(tabList) do
                 tabData.content.Visible = false
                 tabData.button.BackgroundColor3 = Color3.fromRGB(68, 68, 68)
             end
-            -- แสดง Tab ที่เลือก
             tabContent.Visible = true
             tabButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
-            print("Switched to Tab: " .. tabName)
         end
 
         tabButton.MouseButton1Click:Connect(switchTab)
         tabButton.TouchTap:Connect(switchTab)
 
-        -- ทำให้ Tab แรกแสดงผลทันที
         if #tabList == 1 then
             switchTab()
         end
 
-        -- ตัวนับตำแหน่งสำหรับ Toggle, Button, Dropdown, Input, Slider
         local yOffset = 0
 
-        -- ฟังก์ชันสร้าง Toggle
         function tab:CreateToggle(toggleConfig)
             local toggle = {}
             local toggleFrame = Instance.new("Frame")
@@ -330,11 +296,9 @@ function Gghiza07UI:CreateWindow(config)
             corner.Parent = toggleButton
             corner:Clone().Parent = toggleCircle
 
-            -- โหลดสถานะจาก toggleStates ถ้ามี
             local toggleFlag = toggleConfig.Flag or toggleConfig.Name or "UnnamedToggle"
             local isToggled = toggleStates[toggleFlag] or false
 
-            -- อัปเดต UI ตามสถานะที่โหลดมา
             if isToggled then
                 toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
                 toggleCircle.Position = UDim2.new(0.5, 2, 0, 2)
@@ -349,32 +313,26 @@ function Gghiza07UI:CreateWindow(config)
                 if isTweening then return end
                 isTweening = true
                 isToggled = not isToggled
-                print("Toggle state changed to: " .. tostring(isToggled))
 
                 local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
                 local tween
                 if isToggled then
                     toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
-                    print("Set Toggle color to green immediately")
                     tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0.5, 2, 0, 2)})
                 else
                     toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-                    print("Set Toggle color to white immediately")
                     tween = TweenService:Create(toggleCircle, tweenInfo, {Position = UDim2.new(0, 2, 0, 2)})
                 end
                 tween:Play()
                 tween.Completed:Connect(function()
                     if isToggled then
                         toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
-                        print("Confirmed Toggle color to green after tween")
                     else
                         toggleButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-                        print("Confirmed Toggle color to white after tween")
                     end
                     isTweening = false
                 end)
 
-                -- บันทึกสถานะของ Toggle
                 toggleStates[toggleFlag] = isToggled
                 saveToggleStates()
 
@@ -392,14 +350,13 @@ function Gghiza07UI:CreateWindow(config)
             return toggle
         end
 
-        -- ฟังก์ชันสร้าง Button
         function tab:CreateButton(buttonConfig)
             local button = Instance.new("TextButton")
             button.Size = UDim2.new(0, 140, 0, 50)
             button.Position = UDim2.new(0, 10, 0, yOffset)
             button.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
             button.Text = buttonConfig.Name or "Button"
-            button.TextColor3 = Color3.fromRGB(255,  remembrance255, 255)
+            button.TextColor3 = Color3.fromRGB(255, 255, 255)
             button.Parent = tabContent
 
             local corner = Instance.new("UICorner")
@@ -427,7 +384,6 @@ function Gghiza07UI:CreateWindow(config)
             tabContent.CanvasSize = UDim2.new(0, 0, 0, yOffset)
         end
 
-        -- ฟังก์ชันสร้าง Dropdown
         function tab:CreateDropdown(dropdownConfig)
             local dropdown = {}
             local dropdownFrame = Instance.new("Frame")
@@ -507,7 +463,7 @@ function Gghiza07UI:CreateWindow(config)
                     end)
 
                     listHeight = listHeight + 25
-                                end
+                end
 
                 dropdownList.CanvasSize = UDim2.new(0, 0, 0, listHeight)
                 dropdownList.Size = UDim2.new(0, 100, 0, math.min(listHeight, 100))
@@ -525,7 +481,6 @@ function Gghiza07UI:CreateWindow(config)
             return dropdown
         end
 
-        -- ฟังก์ชันสร้าง Input
         function tab:CreateInput(inputConfig)
             local input = {}
             local inputFrame = Instance.new("Frame")
@@ -555,10 +510,8 @@ function Gghiza07UI:CreateWindow(config)
             local corner = Instance.new("UICorner")
             corner.CornerRadius = UDim.new(0, 5)
             corner.Parent = textBox
-
             local inputFlag = inputConfig.Flag or inputConfig.Name or "UnnamedInput"
             textBox.Text = toggleStates[inputFlag] or inputConfig.Default or ""
-
             textBox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
                     toggleStates[inputFlag] = textBox.Text
@@ -575,7 +528,6 @@ function Gghiza07UI:CreateWindow(config)
             return input
         end
 
-        -- ฟังก์ชันสร้าง Slider
         function tab:CreateSlider(sliderConfig)
             local slider = {}
             local sliderFrame = Instance.new("Frame")
