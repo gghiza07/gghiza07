@@ -6,13 +6,13 @@ local HttpService = game:GetService("HttpService")
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Path for saving settings locally
-local SETTINGS_FOLDER = "storage/emulator/0/" .. game.PlaceId .. "/workspace/Gghiza07UISettings"
-local SETTINGS_FILE = SETTINGS_FOLDER .. "/settingsconfig.rfld"
-
 -- ฟังก์ชันหลักสำหรับสร้าง Window
 function Gghiza07UI:CreateWindow(config)
     local window = {}
+
+    -- Dynamic settings folder based on config.Name
+    local SETTINGS_FOLDER = "storage/" .. (config.Name or "Gghiza07UI")
+    local SETTINGS_FILE = SETTINGS_FOLDER .. "/settingsconfig.rfld"
 
     -- ตรวจสอบและลบ UI เก่าถ้ามีอยู่
     local existingScreenGui = playerGui:FindFirstChild(config.Name or "Gghiza07UI")
@@ -509,4 +509,4 @@ function Gghiza07UI:CreateWindow(config)
                     listHeight = listHeight + 25
                 end
 
-  
+       
