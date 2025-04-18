@@ -6,7 +6,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
 -- เวอร์ชันและระบบล็อก
-local VERSION = "V4.6 Enhanced"
+local VERSION = "V4.7 Enhanced"
 local LOCKED = false
 local DEBUG_MODE = true
 
@@ -52,12 +52,28 @@ function Gghiza07UI:CreateWindow(config)
 
     -- ธีมเริ่มต้น
     local defaultTheme = {
-        BackgroundColor = Color3.fromRGB(30, 30, 30),
-        AccentColor = Color3.fromRGB(0, 123, 255),
-        TextColor = Color3.fromRGB(255, 255, 255),
+        BackgroundColor = {R = 30, G = 30, B = 30}, -- ใช้ตารางแทน Color3
+        AccentColor = {R = 0, G = 123, B = 255},
+        TextColor = {R = 255, G = 255, B = 255},
         CornerRadius = 10,
         Transparency = 0.2
     }
+
+    -- ฟังก์ชันแปลง Color3 เป็นตารางและกลับกัน
+    local function color3ToTable(color)
+        return {
+            R = math.floor(color.R * 255 + 0.5),
+            G = math.floor(color.G * 255 + 0.5),
+            B = math.floor(color.B * 255 + 0.5)
+        }
+    end
+
+    local function tableToColor3(tbl)
+        if tbl and tbl.R and tbl.G and tbl.B then
+            return Color3.fromRGB(tbl.R, tbl.G, tbl.B)
+        end
+        return nil
+    end
 
     -- ฟังก์ชันจัดการไฟล์
     local function ensureFolderExists()
@@ -93,24 +109,41 @@ function Gghiza07UI:CreateWindow(config)
                 return HttpService:JSONDecode(readfile(file))
             end)
             if success then
+                debugPrint("Successfully loaded data from", file)
                 return data
             else
                 debugPrint("Failed to load data from", file, "Error:", data)
                 return default
             end
         end
+        debugPrint(file, "does not exist, using default")
         return default
     end
 
     -- โหลดธีม
-    local theme = loadData(THEME_FILE, defaultTheme) or defaultTheme
-    if not theme.BackgroundColor then
-        debugPrint("theme.BackgroundColor is nil, using default")
-        theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
+    local loadedTheme = loadData(THEME_FILE, defaultTheme)
+    local theme = {}
+    
+    -- ตรวจสอบและแปลง theme ให้ถูกต้อง
+    if type(loadedTheme) == "table" then
+        theme.BackgroundColor = tableToColor3(loadedTheme.BackgroundColor) or tableToColor3(defaultTheme.BackgroundColor)
+        theme.AccentColor = tableToColor3(loadedTheme.AccentColor) or tableToColor3(defaultTheme.AccentColor)
+        theme.TextColor = tableToColor3(loadedTheme.TextColor) or tableToColor3(defaultTheme.TextColor)
+        theme.CornerRadius = loadedTheme.CornerRadius or defaultTheme.CornerRadius
+        theme.Transparency = loadedTheme.Transparency or defaultTheme.Transparency
+    else
+        debugPrint("Loaded theme is not a table, using default theme")
+        theme.BackgroundColor = tableToColor3(defaultTheme.BackgroundColor)
+        theme.AccentColor = tableToColor3(defaultTheme.AccentColor)
+        theme.TextColor = tableToColor3(defaultTheme.TextColor)
+        theme.CornerRadius = defaultTheme.CornerRadius
+        theme.Transparency = defaultTheme.Transparency
     end
-    if not theme.Transparency then
-        debugPrint("theme.Transparency is nil, using default")
-        theme.Transparency = 0.2
+
+    -- ตรวจสอบเพิ่มเติม
+    if not theme.BackgroundColor then
+        debugPrint("theme.BackgroundColor is still nil after loading, using default")
+        theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
     end
 
     -- สร้าง UI หลัก
@@ -147,8 +180,8 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0.8, 0, 0.8, 0)
     mainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-    mainFrame.BackgroundColor3 = theme.BackgroundColor or Color3.fromRGB(30, 30, 30)
-    mainFrame.BackgroundTransparency = theme.Transparency or 0.2
+    mainFrame.BackgroundColor3 = theme.BackgroundColor
+    mainFrame.BackgroundTransparency = theme.Transparency
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
 
@@ -702,7 +735,15 @@ function Gghiza07UI:CreateWindow(config)
                         local color = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
                         mainFrame.BackgroundColor3 = color
                         theme.BackgroundColor = color
-                        saveData(THEME_FILE, theme)
+                        -- แปลง theme เป็นตารางที่เหมาะสมสำหรับ JSON
+                        local themeToSave = {
+                            BackgroundColor = color3ToTable(theme.BackgroundColor),
+                            AccentColor = color3ToTable(theme.AccentColor),
+                            TextColor = color3ToTable(theme.TextColor),
+                            CornerRadius = theme.CornerRadius,
+                            Transparency = theme.Transparency
+                        }
+                        saveData(THEME_FILE, themeToSave)
                     else
                         warn("Invalid RGB format. Use: R,G,B (e.g., 30,30,30)")
                     end
@@ -768,7 +809,15 @@ function Gghiza07UI:CreateWindow(config)
                 Callback = function(value)
                     mainFrame.BackgroundTransparency = value
                     theme.Transparency = value
-                    saveData(THEME_FILE, theme)
+                    -- แปลง theme เป็นตารางที่เหมาะสมสำหรับ JSON
+                    local themeToSave = {
+                        BackgroundColor = color3ToTable(theme.BackgroundColor),
+                        AccentColor = color3ToTable(theme.AccentColor),
+                        TextColor = color3ToTable(theme.TextColor),
+                        CornerRadius = theme.CornerRadius,
+                        Transparency = theme.Transparency
+                    }
+                    saveData(THEME_FILE, themeToSave)
                 end
             })
 
