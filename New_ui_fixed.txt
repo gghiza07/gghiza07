@@ -6,7 +6,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
 -- เวอร์ชันและระบบล็อก
-local VERSION = "V4.10 Enhanced"
+local VERSION = "V4.11 Enhanced"
 local LOCKED = false
 local DEBUG_MODE = true
 
@@ -793,12 +793,16 @@ function Gghiza07UI:CreateWindow(config)
                             videoFrame.Visible = false
                             backgroundImage.Visible = true
                             backgroundImage.ZIndex = 5
-                            mainFrame.BackgroundTransparency = 1
+                            mainFrame.BackgroundTransparency = 1 -- โปร่งใสเพื่อให้เห็นรูปภาพ
                             debugPrint("BackgroundImage Visible:", backgroundImage.Visible, "ZIndex:", backgroundImage.ZIndex)
                             debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
                             saveData(BACKGROUND_FILE, value)
                         else
                             warn("Failed to load image:", err)
+                            backgroundImage.Image = "" -- ล้าง Image ID
+                            backgroundImage.Visible = false
+                            mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
+                            debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                         end
                     else
                         warn("Invalid Image ID format")
@@ -817,7 +821,7 @@ function Gghiza07UI:CreateWindow(config)
                             videoFrame.Visible = true
                             backgroundImage.Visible = false
                             videoFrame.ZIndex = 5
-                            mainFrame.BackgroundTransparency = 1
+                            mainFrame.BackgroundTransparency = 1 -- โปร่งใสเพื่อให้เห็นวิดีโอ
                             videoFrame:Play()
                         end)
                         if success then
@@ -826,7 +830,10 @@ function Gghiza07UI:CreateWindow(config)
                         else
                             warn("Failed to load video:", err)
                             videoFrame.Visible = false
+                            videoFrame.Video = "" -- ล้าง Video ID
                             backgroundImage.Visible = true
+                            mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
+                            debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                         end
                     else
                         warn("Invalid Video ID format")
@@ -842,8 +849,11 @@ function Gghiza07UI:CreateWindow(config)
                 Default = theme.Transparency,
                 Callback = function(value)
                     debugPrint("Setting Transparency to:", value)
-                    mainFrame.BackgroundTransparency = value
                     theme.Transparency = value
+                    -- อัพเดต Transparency เฉพาะเมื่อไม่มีรูปภาพหรือวิดีโอ
+                    if not backgroundImage.Visible and not videoFrame.Visible then
+                        mainFrame.BackgroundTransparency = value
+                    end
                     local themeToSave = {
                         BackgroundColor = color3ToTable(theme.BackgroundColor),
                         AccentColor = color3ToTable(theme.AccentColor),
@@ -924,6 +934,9 @@ function Gghiza07UI:CreateWindow(config)
                 debugPrint("After loading - BackgroundImage Image:", backgroundImage.Image)
             else
                 debugPrint("Failed to load background image:", err)
+                backgroundImage.Image = ""
+                backgroundImage.Visible = false
+                mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
             end
         end
 
@@ -940,8 +953,15 @@ function Gghiza07UI:CreateWindow(config)
             if not success then
                 debugPrint("Failed to load background video:", err)
                 videoFrame.Visible = false
+                videoFrame.Video = ""
                 backgroundImage.Visible = true
+                mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
             end
+        end
+
+        -- ถ้าไม่มีทั้งรูปภาพและวิดีโอ ใช้ Transparency จาก theme
+        if not backgroundImage.Visible and not videoFrame.Visible then
+            mainFrame.BackgroundTransparency = theme.Transparency
         end
     end
 
