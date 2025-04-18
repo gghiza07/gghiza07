@@ -6,7 +6,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
 -- เวอร์ชันและระบบล็อก
-local VERSION = "V4.5 Enhanced"
+local VERSION = "V4.6 Enhanced"
 local LOCKED = false
 local DEBUG_MODE = true
 
@@ -92,14 +92,26 @@ function Gghiza07UI:CreateWindow(config)
             local success, data = pcall(function()
                 return HttpService:JSONDecode(readfile(file))
             end)
-            if success then return data end
-            debugPrint("Failed to load data from", file)
+            if success then
+                return data
+            else
+                debugPrint("Failed to load data from", file, "Error:", data)
+                return default
+            end
         end
-        return default or nil
+        return default
     end
 
     -- โหลดธีม
     local theme = loadData(THEME_FILE, defaultTheme) or defaultTheme
+    if not theme.BackgroundColor then
+        debugPrint("theme.BackgroundColor is nil, using default")
+        theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
+    end
+    if not theme.Transparency then
+        debugPrint("theme.Transparency is nil, using default")
+        theme.Transparency = 0.2
+    end
 
     -- สร้าง UI หลัก
     local player = game.Players.LocalPlayer
@@ -135,8 +147,8 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0.8, 0, 0.8, 0)
     mainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-    mainFrame.BackgroundColor3 = theme.BackgroundColor
-    mainFrame.BackgroundTransparency = theme.Transparency
+    mainFrame.BackgroundColor3 = theme.BackgroundColor or Color3.fromRGB(30, 30, 30)
+    mainFrame.BackgroundTransparency = theme.Transparency or 0.2
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
 
