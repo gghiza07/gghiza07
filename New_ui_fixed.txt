@@ -6,7 +6,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
 -- เวอร์ชันและระบบล็อก
-local VERSION = "V4.7 Enhanced"
+local VERSION = "V4.10 Enhanced"
 local LOCKED = false
 local DEBUG_MODE = true
 
@@ -49,10 +49,17 @@ function Gghiza07UI:CreateWindow(config)
     local BACKGROUND_FILE = SETTINGS_FOLDER .. "/background.txt"
     local VIDEO_FILE = SETTINGS_FOLDER .. "/video.txt"
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
+    local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
+
+    -- ตัวแปรเก็บสถานะของ Toggle และ Input
+    local elementStates = {
+        Toggles = {},
+        Inputs = {}
+    }
 
     -- ธีมเริ่มต้น
     local defaultTheme = {
-        BackgroundColor = {R = 30, G = 30, B = 30}, -- ใช้ตารางแทน Color3
+        BackgroundColor = {R = 30, G = 30, B = 30},
         AccentColor = {R = 0, G = 123, B = 255},
         TextColor = {R = 255, G = 255, B = 255},
         CornerRadius = 10,
@@ -120,11 +127,13 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
+    -- โหลดสถานะของ Toggle และ Input
+    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}})
+
     -- โหลดธีม
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
     local theme = {}
     
-    -- ตรวจสอบและแปลง theme ให้ถูกต้อง
     if type(loadedTheme) == "table" then
         theme.BackgroundColor = tableToColor3(loadedTheme.BackgroundColor) or tableToColor3(defaultTheme.BackgroundColor)
         theme.AccentColor = tableToColor3(loadedTheme.AccentColor) or tableToColor3(defaultTheme.AccentColor)
@@ -140,7 +149,6 @@ function Gghiza07UI:CreateWindow(config)
         theme.Transparency = defaultTheme.Transparency
     end
 
-    -- ตรวจสอบเพิ่มเติม
     if not theme.BackgroundColor then
         debugPrint("theme.BackgroundColor is still nil after loading, using default")
         theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
@@ -460,11 +468,17 @@ function Gghiza07UI:CreateWindow(config)
             toggleLabel.ZIndex = 11
             toggleLabel.Parent = toggleFrame
 
+            -- โหลดสถานะ Toggle จากไฟล์ (ถ้ามี)
+            local toggleState = toggleConfig.Default or false
+            if elementStates.Toggles[toggleConfig.Name] ~= nil then
+                toggleState = elementStates.Toggles[toggleConfig.Name]
+            end
+
             local toggleButton = Instance.new("TextButton")
             toggleButton.Size = UDim2.new(0.2, 0, 0.6, 0)
             toggleButton.Position = UDim2.new(0.8, 0, 0.2, 0)
-            toggleButton.BackgroundColor3 = toggleConfig.Default and theme.AccentColor or Color3.fromRGB(100, 100, 100)
-            toggleButton.Text = toggleConfig.Default and "ON" or "OFF"
+            toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+            toggleButton.Text = toggleState and "ON" or "OFF"
             toggleButton.TextColor3 = theme.TextColor
             toggleButton.TextScaled = true
             toggleButton.ZIndex = 11
@@ -476,11 +490,13 @@ function Gghiza07UI:CreateWindow(config)
             cornerToggle.CornerRadius = UDim.new(0, 5)
             cornerToggle.Parent = toggleButton
 
-            local toggleState = toggleConfig.Default or false
             toggleButton.MouseButton1Click:Connect(function()
                 toggleState = not toggleState
                 toggleButton.Text = toggleState and "ON" or "OFF"
                 toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+                -- บันทึกสถานะ Toggle
+                elementStates.Toggles[toggleConfig.Name] = toggleState
+                saveData(ELEMENTS_FILE, elementStates)
                 if toggleConfig.Callback then
                     local success, err = pcall(toggleConfig.Callback, toggleState)
                     if not success then
@@ -693,11 +709,17 @@ function Gghiza07UI:CreateWindow(config)
             inputLabel.ZIndex = 11
             inputLabel.Parent = inputFrame
 
+            -- โหลดค่า Input จากไฟล์ (ถ้ามี)
+            local defaultText = inputConfig.Default or ""
+            if elementStates.Inputs[inputConfig.Name] ~= nil then
+                defaultText = elementStates.Inputs[inputConfig.Name]
+            end
+
             local textBox = Instance.new("TextBox")
             textBox.Size = UDim2.new(0.6, 0, 0.8, 0)
             textBox.Position = UDim2.new(0.4, 0, 0.1, 0)
             textBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            textBox.Text = inputConfig.Default or ""
+            textBox.Text = defaultText
             textBox.TextColor3 = theme.TextColor
             textBox.TextScaled = true
             textBox.TextEditable = true
@@ -709,10 +731,15 @@ function Gghiza07UI:CreateWindow(config)
             cornerInput.Parent = textBox
 
             textBox.FocusLost:Connect(function(enterPressed)
-                if enterPressed and inputConfig.Callback then
-                    local success, err = pcall(inputConfig.Callback, textBox.Text)
-                    if not success then
-                        debugPrint("Input callback error:", err)
+                if enterPressed then
+                    -- บันทึกค่า Input
+                    elementStates.Inputs[inputConfig.Name] = textBox.Text
+                    saveData(ELEMENTS_FILE, elementStates)
+                    if inputConfig.Callback then
+                        local success, err = pcall(inputConfig.Callback, textBox.Text)
+                        if not success then
+                            debugPrint("Input callback error:", err)
+                        end
                     end
                 end
             end)
@@ -733,9 +760,9 @@ function Gghiza07UI:CreateWindow(config)
                     local r, g, b = value:match("(%d+),%s*(%d+),%s*(%d+)")
                     if r and g and b then
                         local color = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+                        debugPrint("Setting BackgroundColor3 to:", r, g, b)
                         mainFrame.BackgroundColor3 = color
                         theme.BackgroundColor = color
-                        -- แปลง theme เป็นตารางที่เหมาะสมสำหรับ JSON
                         local themeToSave = {
                             BackgroundColor = color3ToTable(theme.BackgroundColor),
                             AccentColor = color3ToTable(theme.AccentColor),
@@ -744,6 +771,7 @@ function Gghiza07UI:CreateWindow(config)
                             Transparency = theme.Transparency
                         }
                         saveData(THEME_FILE, themeToSave)
+                        debugPrint("MainFrame BackgroundColor3:", mainFrame.BackgroundColor3.R * 255, mainFrame.BackgroundColor3.G * 255, mainFrame.BackgroundColor3.B * 255)
                     else
                         warn("Invalid RGB format. Use: R,G,B (e.g., 30,30,30)")
                     end
@@ -764,6 +792,10 @@ function Gghiza07UI:CreateWindow(config)
                             backgroundImage.Image = value
                             videoFrame.Visible = false
                             backgroundImage.Visible = true
+                            backgroundImage.ZIndex = 5
+                            mainFrame.BackgroundTransparency = 1
+                            debugPrint("BackgroundImage Visible:", backgroundImage.Visible, "ZIndex:", backgroundImage.ZIndex)
+                            debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
                             saveData(BACKGROUND_FILE, value)
                         else
                             warn("Failed to load image:", err)
@@ -784,6 +816,8 @@ function Gghiza07UI:CreateWindow(config)
                             videoFrame.Video = value
                             videoFrame.Visible = true
                             backgroundImage.Visible = false
+                            videoFrame.ZIndex = 5
+                            mainFrame.BackgroundTransparency = 1
                             videoFrame:Play()
                         end)
                         if success then
@@ -807,9 +841,9 @@ function Gghiza07UI:CreateWindow(config)
                 Max = 1,
                 Default = theme.Transparency,
                 Callback = function(value)
+                    debugPrint("Setting Transparency to:", value)
                     mainFrame.BackgroundTransparency = value
                     theme.Transparency = value
-                    -- แปลง theme เป็นตารางที่เหมาะสมสำหรับ JSON
                     local themeToSave = {
                         BackgroundColor = color3ToTable(theme.BackgroundColor),
                         AccentColor = color3ToTable(theme.AccentColor),
@@ -818,6 +852,7 @@ function Gghiza07UI:CreateWindow(config)
                         Transparency = theme.Transparency
                     }
                     saveData(THEME_FILE, themeToSave)
+                    debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
                 end
             })
 
@@ -835,6 +870,34 @@ function Gghiza07UI:CreateWindow(config)
                 end
             })
 
+            -- รีเซ็ตการตั้งค่า
+            bgTab:AddButton({
+                Name = "Reset Settings",
+                Callback = function()
+                    local success, err = pcall(function()
+                        if isfolder(SETTINGS_FOLDER) then
+                            delfolder(SETTINGS_FOLDER)
+                            debugPrint("Deleted settings folder:", SETTINGS_FOLDER)
+                        end
+                    end)
+                    if success then
+                        -- รีเซ็ตค่าใน UI
+                        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                        mainFrame.BackgroundTransparency = 0.2
+                        backgroundImage.Image = ""
+                        backgroundImage.Visible = true
+                        videoFrame.Video = ""
+                        videoFrame.Visible = false
+                        elementStates.Toggles = {}
+                        elementStates.Inputs = {}
+                        saveData(ELEMENTS_FILE, elementStates)
+                        debugPrint("Settings reset successfully")
+                    else
+                        warn("Failed to reset settings:", err)
+                    end
+                end
+            })
+
             updateCanvasSize()
         end
 
@@ -843,7 +906,6 @@ function Gghiza07UI:CreateWindow(config)
 
     -- โหลดการตั้งค่าที่บันทึกไว้
     local function loadSettings()
-        -- รีเซ็ตการตั้งค่า Visible
         backgroundImage.Visible = true
         videoFrame.Visible = false
 
@@ -856,7 +918,10 @@ function Gghiza07UI:CreateWindow(config)
                 debugPrint("Loaded saved background image:", bgImage)
                 backgroundImage.Image = bgImage
                 backgroundImage.Visible = true
+                backgroundImage.ZIndex = 5
+                mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
+                debugPrint("After loading - BackgroundImage Image:", backgroundImage.Image)
             else
                 debugPrint("Failed to load background image:", err)
             end
@@ -868,6 +933,8 @@ function Gghiza07UI:CreateWindow(config)
                 videoFrame.Video = bgVideo
                 videoFrame.Visible = true
                 backgroundImage.Visible = false
+                videoFrame.ZIndex = 5
+                mainFrame.BackgroundTransparency = 1
                 videoFrame:Play()
             end)
             if not success then
