@@ -5,12 +5,10 @@ local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
--- เวอร์ชันและระบบล็อก
 local VERSION = "V4.11 Enhanced"
 local LOCKED = false
 local DEBUG_MODE = true
 
--- ฟังก์ชันดีบัก
 local function debugPrint(...)
     if DEBUG_MODE then
         print("[Gghiza07UI DEBUG]", ...)
@@ -43,7 +41,6 @@ function Gghiza07UI:CreateWindow(config)
     local window = {}
     debugPrint("Creating window:", config.Name, "Version:", VERSION)
 
-    -- ระบบไฟล์และโฟลเดอร์
     local SETTINGS_FOLDER = "Gghiza07UI/" .. (config.Name or "DefaultUI")
     local SETTINGS_FILE = SETTINGS_FOLDER .. "/settings.json"
     local BACKGROUND_FILE = SETTINGS_FOLDER .. "/background.txt"
@@ -51,13 +48,11 @@ function Gghiza07UI:CreateWindow(config)
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
 
-    -- ตัวแปรเก็บสถานะของ Toggle และ Input
     local elementStates = {
         Toggles = {},
         Inputs = {}
     }
 
-    -- ธีมเริ่มต้น
     local defaultTheme = {
         BackgroundColor = {R = 30, G = 30, B = 30},
         AccentColor = {R = 0, G = 123, B = 255},
@@ -66,7 +61,6 @@ function Gghiza07UI:CreateWindow(config)
         Transparency = 0.2
     }
 
-    -- ฟังก์ชันแปลง Color3 เป็นตารางและกลับกัน
     local function color3ToTable(color)
         return {
             R = math.floor(color.R * 255 + 0.5),
@@ -82,7 +76,6 @@ function Gghiza07UI:CreateWindow(config)
         return nil
     end
 
-    -- ฟังก์ชันจัดการไฟล์
     local function ensureFolderExists()
         local success, err = pcall(function()
             if not isfolder("Gghiza07UI") then
@@ -127,10 +120,12 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    -- โหลดสถานะของ Toggle และ Input
     elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}})
+    if not isfile(ELEMENTS_FILE) then
+        debugPrint("No elements file found, resetting elementStates")
+        elementStates = {Toggles = {}, Inputs = {}}
+    end
 
-    -- โหลดธีม
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
     local theme = {}
     
@@ -154,7 +149,6 @@ function Gghiza07UI:CreateWindow(config)
         theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
     end
 
-    -- สร้าง UI หลัก
     local player = game.Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui", 10)
     if not playerGui then
@@ -162,7 +156,6 @@ function Gghiza07UI:CreateWindow(config)
         return
     end
 
-    -- ลบ UI เก่าถ้ามี
     local function clearGui(gui)
         if gui then
             for _, connection in ipairs(gui:GetConnections()) do
@@ -174,7 +167,6 @@ function Gghiza07UI:CreateWindow(config)
     clearGui(playerGui:FindFirstChild(config.Name or "Gghiza07UI"))
     clearGui(playerGui:FindFirstChild("ToggleGui"))
 
-    -- สร้าง ScreenGui หลัก
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = config.Name or "Gghiza07UI"
     screenGui.Parent = playerGui
@@ -183,7 +175,6 @@ function Gghiza07UI:CreateWindow(config)
     screenGui.IgnoreGuiInset = true
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
-    -- เฟรมหลัก
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0.8, 0, 0.8, 0)
@@ -193,12 +184,10 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
 
-    -- มุมโค้ง
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, theme.CornerRadius)
     corner.Parent = mainFrame
 
-    -- พื้นหลัง (รูปภาพ)
     local backgroundImage = Instance.new("ImageLabel")
     backgroundImage.Name = "BackgroundImage"
     backgroundImage.Size = UDim2.new(1, 0, 1, 0)
@@ -208,7 +197,6 @@ function Gghiza07UI:CreateWindow(config)
     backgroundImage.ScaleType = Enum.ScaleType.Crop
     backgroundImage.Parent = mainFrame
 
-    -- พื้นหลัง (วิดีโอ)
     local videoFrame = Instance.new("VideoFrame")
     videoFrame.Name = "BackgroundVideo"
     videoFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -218,7 +206,6 @@ function Gghiza07UI:CreateWindow(config)
     videoFrame.Visible = false
     videoFrame.Parent = mainFrame
 
-    -- ระบบลากเคลื่อนย้าย UI
     local dragging, dragStart, startPos
     mainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -244,7 +231,6 @@ function Gghiza07UI:CreateWindow(config)
         end
     end)
 
-    -- ส่วนหัว UI
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "Title"
     titleLabel.Size = UDim2.new(0, 200, 0, 30)
@@ -257,7 +243,6 @@ function Gghiza07UI:CreateWindow(config)
     titleLabel.ZIndex = 11
     titleLabel.Parent = mainFrame
 
-    -- ส่วน Tab
     local tabButtons = Instance.new("Frame")
     tabButtons.Name = "TabButtons"
     tabButtons.Size = UDim2.new(1, -20, 0, 40)
@@ -275,7 +260,6 @@ function Gghiza07UI:CreateWindow(config)
     tabContents.Active = true
     tabContents.Parent = mainFrame
 
-    -- ปุ่มเปิดปิด UI
     local toggleButton = Instance.new("TextButton")
     toggleButton.Name = "ToggleButton"
     toggleButton.Size = UDim2.new(0, 50, 0, 50)
@@ -293,7 +277,6 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
-    -- ระบบเปิดปิด UI
     local function toggleUI(state)
         if state ~= nil then
             mainFrame.Visible = state
@@ -307,7 +290,6 @@ function Gghiza07UI:CreateWindow(config)
 
     toggleButton.MouseButton1Click:Connect(toggleUI)
 
-    -- ระบบลากเคลื่อนย้ายปุ่มเปิดปิด
     local toggleDragging, toggleDragStart, toggleStartPos
     toggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -333,7 +315,6 @@ function Gghiza07UI:CreateWindow(config)
         end
     end)
 
-    -- ระบบ Tab
     function window:CreateTab(tabName)
         if not tabName or type(tabName) ~= "string" then
             warn("Invalid tab name. Expected a string.")
@@ -343,7 +324,6 @@ function Gghiza07UI:CreateWindow(config)
         local tab = {}
         local tabId = #tabButtons:GetChildren() + 1
         
-        -- ปุ่ม Tab
         local tabButton = Instance.new("TextButton")
         tabButton.Name = tabName
         tabButton.Size = UDim2.new(0, 100, 1, 0)
@@ -360,7 +340,6 @@ function Gghiza07UI:CreateWindow(config)
         cornerTab.CornerRadius = UDim.new(0, 5)
         cornerTab.Parent = tabButton
 
-        -- เนื้อหา Tab
         local tabContent = Instance.new("ScrollingFrame")
         tabContent.Name = tabName
         tabContent.Size = UDim2.new(1, 0, 1, 0)
@@ -377,7 +356,6 @@ function Gghiza07UI:CreateWindow(config)
         uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
         uiListLayout.Parent = tabContent
 
-        -- อัพเดตขนาดของ ScrollingFrame ตามเนื้อหา
         local function updateCanvasSize()
             local contentHeight = uiListLayout.AbsoluteContentSize.Y
             tabContent.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
@@ -385,7 +363,6 @@ function Gghiza07UI:CreateWindow(config)
 
         uiListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
 
-        -- ฟังก์ชันสลับ Tab
         local function selectTab()
             for _, content in ipairs(tabContents:GetChildren()) do
                 if content:IsA("ScrollingFrame") then
@@ -404,10 +381,8 @@ function Gghiza07UI:CreateWindow(config)
 
         tabButton.MouseButton1Click:Connect(selectTab)
 
-        -- เลือก Tab แรกโดยอัตโนมัติ
         if tabId == 1 then selectTab() end
 
-        -- ฟังก์ชันสร้าง UI Elements
         function tab:AddButton(buttonConfig)
             if not buttonConfig or type(buttonConfig) ~= "table" then
                 warn("Invalid button config. Expected a table.")
@@ -468,10 +443,12 @@ function Gghiza07UI:CreateWindow(config)
             toggleLabel.ZIndex = 11
             toggleLabel.Parent = toggleFrame
 
-            -- โหลดสถานะ Toggle จากไฟล์ (ถ้ามี)
             local toggleState = toggleConfig.Default or false
             if elementStates.Toggles[toggleConfig.Name] ~= nil then
                 toggleState = elementStates.Toggles[toggleConfig.Name]
+                debugPrint("Loaded toggle state for", toggleConfig.Name, ":", toggleState)
+            else
+                debugPrint("No saved state for", toggleConfig.Name, ", using default:", toggleState)
             end
 
             local toggleButton = Instance.new("TextButton")
@@ -494,7 +471,6 @@ function Gghiza07UI:CreateWindow(config)
                 toggleState = not toggleState
                 toggleButton.Text = toggleState and "ON" or "OFF"
                 toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
-                -- บันทึกสถานะ Toggle
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
                 if toggleConfig.Callback then
@@ -709,7 +685,6 @@ function Gghiza07UI:CreateWindow(config)
             inputLabel.ZIndex = 11
             inputLabel.Parent = inputFrame
 
-            -- โหลดค่า Input จากไฟล์ (ถ้ามี)
             local defaultText = inputConfig.Default or ""
             if elementStates.Inputs[inputConfig.Name] ~= nil then
                 defaultText = elementStates.Inputs[inputConfig.Name]
@@ -732,7 +707,6 @@ function Gghiza07UI:CreateWindow(config)
 
             textBox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
-                    -- บันทึกค่า Input
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
                     if inputConfig.Callback then
@@ -748,11 +722,9 @@ function Gghiza07UI:CreateWindow(config)
             return inputFrame
         end
 
-        -- ระบบเปลี่ยนพื้นหลัง
         function tab:AddBackgroundOptions()
             local bgTab = self
             
-            -- เปลี่ยนสีพื้นหลัง
             bgTab:AddInput({
                 Name = "Background Color (R,G,B)",
                 Default = "30,30,30",
@@ -778,7 +750,6 @@ function Gghiza07UI:CreateWindow(config)
                 end
             })
             
-            -- เปลี่ยนรูปพื้นหลัง
             bgTab:AddInput({
                 Name = "Image ID (rbxassetid://)",
                 Callback = function(value)
@@ -788,29 +759,57 @@ function Gghiza07UI:CreateWindow(config)
                             ContentProvider:PreloadAsync({value})
                         end)
                         if success then
-                            debugPrint("Image loaded successfully")
+                            debugPrint("Image preloaded successfully")
                             backgroundImage.Image = value
                             videoFrame.Visible = false
                             backgroundImage.Visible = true
                             backgroundImage.ZIndex = 5
-                            mainFrame.BackgroundTransparency = 1 -- โปร่งใสเพื่อให้เห็นรูปภาพ
+                            mainFrame.BackgroundTransparency = 1
                             debugPrint("BackgroundImage Visible:", backgroundImage.Visible, "ZIndex:", backgroundImage.ZIndex)
                             debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
-                            saveData(BACKGROUND_FILE, value)
+
+                            local timeout = 5
+                            local elapsed = 0
+                            local connection
+                            connection = RunService.Heartbeat:Connect(function(deltaTime)
+                                elapsed = elapsed + deltaTime
+                                if elapsed >= timeout then
+                                    connection:Disconnect()
+                                    debugPrint("Image load timeout")
+                                    if backgroundImage.Image == value then
+                                        debugPrint("Image still set but not displayed, assuming failure")
+                                        backgroundImage.Image = ""
+                                        backgroundImage.Visible = false
+                                        mainFrame.BackgroundTransparency = theme.Transparency
+                                        debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                                    end
+                                    return
+                                end
+
+                                if backgroundImage.Image == value and backgroundImage.ImageTransparency == 0 then
+                                    debugPrint("Image confirmed displayed")
+                                    connection:Disconnect()
+                                    mainFrame.BackgroundTransparency = 1
+                                    saveData(BACKGROUND_FILE, value)
+                                end
+                            end)
                         else
-                            warn("Failed to load image:", err)
-                            backgroundImage.Image = "" -- ล้าง Image ID
+                            warn("Failed to preload image:", err)
+                            backgroundImage.Image = ""
                             backgroundImage.Visible = false
-                            mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
+                            mainFrame.BackgroundTransparency = theme.Transparency
                             debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                         end
                     else
                         warn("Invalid Image ID format")
+                        backgroundImage.Image = ""
+                        backgroundImage.Visible = false
+                        mainFrame.BackgroundTransparency = theme.Transparency
+                        debugPrint("Invalid Image ID, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                     end
                 end
             })
             
-            -- เปลี่ยนวิดีโอพื้นหลัง
             bgTab:AddInput({
                 Name = "Video ID (rbxassetid://)",
                 Callback = function(value)
@@ -821,27 +820,56 @@ function Gghiza07UI:CreateWindow(config)
                             videoFrame.Visible = true
                             backgroundImage.Visible = false
                             videoFrame.ZIndex = 5
-                            mainFrame.BackgroundTransparency = 1 -- โปร่งใสเพื่อให้เห็นวิดีโอ
+                            mainFrame.BackgroundTransparency = 1
                             videoFrame:Play()
                         end)
                         if success then
                             debugPrint("Video loaded successfully")
-                            saveData(VIDEO_FILE, value)
+                            local timeout = 5
+                            local elapsed = 0
+                            local connection
+                            connection = RunService.Heartbeat:Connect(function(deltaTime)
+                                elapsed = elapsed + deltaTime
+                                if elapsed >= timeout then
+                                    connection:Disconnect()
+                                    debugPrint("Video load timeout")
+                                    if videoFrame.Video == value and not videoFrame.IsPlaying then
+                                        debugPrint("Video still set but not playing, assuming failure")
+                                        videoFrame.Video = ""
+                                        videoFrame.Visible = false
+                                        backgroundImage.Visible = true
+                                        mainFrame.BackgroundTransparency = theme.Transparency
+                                        debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                                    end
+                                    return
+                                end
+
+                                if videoFrame.Video == value and videoFrame.IsPlaying then
+                                    debugPrint("Video confirmed playing")
+                                    connection:Disconnect()
+                                    mainFrame.BackgroundTransparency = 1
+                                    saveData(VIDEO_FILE, value)
+                                end
+                            end)
                         else
                             warn("Failed to load video:", err)
+                            videoFrame.Video = ""
                             videoFrame.Visible = false
-                            videoFrame.Video = "" -- ล้าง Video ID
                             backgroundImage.Visible = true
-                            mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
+                            mainFrame.BackgroundTransparency = theme.Transparency
                             debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                         end
                     else
                         warn("Invalid Video ID format")
+                        videoFrame.Video = ""
+                        videoFrame.Visible = false
+                        backgroundImage.Visible = true
+                        mainFrame.BackgroundTransparency = theme.Transparency
+                        debugPrint("Invalid Video ID, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                     end
                 end
             })
             
-            -- ความโปร่งใส
             bgTab:AddSlider({
                 Name = "Transparency",
                 Min = 0,
@@ -850,9 +878,13 @@ function Gghiza07UI:CreateWindow(config)
                 Callback = function(value)
                     debugPrint("Setting Transparency to:", value)
                     theme.Transparency = value
-                    -- อัพเดต Transparency เฉพาะเมื่อไม่มีรูปภาพหรือวิดีโอ
-                    if not backgroundImage.Visible and not videoFrame.Visible then
+                    local isImageDisplayed = backgroundImage.Visible and backgroundImage.Image ~= "" and backgroundImage.ImageTransparency == 0
+                    local isVideoPlaying = videoFrame.Visible and videoFrame.Video ~= "" and videoFrame.IsPlaying
+                    if not isImageDisplayed and not isVideoPlaying then
                         mainFrame.BackgroundTransparency = value
+                        debugPrint("No image or video displayed, MainFrame Transparency updated to:", value)
+                    else
+                        debugPrint("Image or video is displayed, keeping MainFrame Transparency at 1")
                     end
                     local themeToSave = {
                         BackgroundColor = color3ToTable(theme.BackgroundColor),
@@ -866,21 +898,23 @@ function Gghiza07UI:CreateWindow(config)
                 end
             })
 
-            -- หยุด/เล่นวิดีโอ
             bgTab:AddButton({
                 Name = "Pause/Play Video",
                 Callback = function()
                     if videoFrame.IsLoaded then
                         if videoFrame.IsPlaying then
                             videoFrame:Pause()
+                            debugPrint("Video paused")
                         else
                             videoFrame:Play()
+                            debugPrint("Video playing")
                         end
+                    else
+                        debugPrint("No video loaded")
                     end
                 end
             })
 
-            -- รีเซ็ตการตั้งค่า
             bgTab:AddButton({
                 Name = "Reset Settings",
                 Callback = function()
@@ -891,7 +925,6 @@ function Gghiza07UI:CreateWindow(config)
                         end
                     end)
                     if success then
-                        -- รีเซ็ตค่าใน UI
                         mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                         mainFrame.BackgroundTransparency = 0.2
                         backgroundImage.Image = ""
@@ -914,34 +947,61 @@ function Gghiza07UI:CreateWindow(config)
         return tab
     end
 
-    -- โหลดการตั้งค่าที่บันทึกไว้
     local function loadSettings()
         backgroundImage.Visible = true
         videoFrame.Visible = false
 
         local bgImage = loadData(BACKGROUND_FILE, "")
         if bgImage and bgImage ~= "" then
+            debugPrint("Loading saved background image:", bgImage)
             local success, err = pcall(function()
                 ContentProvider:PreloadAsync({bgImage})
             end)
             if success then
-                debugPrint("Loaded saved background image:", bgImage)
+                debugPrint("Saved image preloaded successfully")
                 backgroundImage.Image = bgImage
                 backgroundImage.Visible = true
                 backgroundImage.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
                 debugPrint("After loading - BackgroundImage Image:", backgroundImage.Image)
+
+                local timeout = 5
+                local elapsed = 0
+                local connection
+                connection = RunService.Heartbeat:Connect(function(deltaTime)
+                    elapsed = elapsed + deltaTime
+                    if elapsed >= timeout then
+                        connection:Disconnect()
+                        debugPrint("Saved image load timeout")
+                        if backgroundImage.Image == bgImage then
+                            debugPrint("Saved image still set but not displayed, assuming failure")
+                            backgroundImage.Image = ""
+                            backgroundImage.Visible = false
+                            mainFrame.BackgroundTransparency = theme.Transparency
+                            debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                        end
+                        return
+                    end
+
+                    if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 0 then
+                        debugPrint("Saved image confirmed displayed")
+                        connection:Disconnect()
+                        mainFrame.BackgroundTransparency = 1
+                    end
+                end)
             else
-                debugPrint("Failed to load background image:", err)
+                debugPrint("Failed to load saved background image:", err)
                 backgroundImage.Image = ""
                 backgroundImage.Visible = false
-                mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
+                mainFrame.BackgroundTransparency = theme.Transparency
+                debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
             end
         end
 
         local bgVideo = loadData(VIDEO_FILE, "")
         if bgVideo and bgVideo ~= "" then
+            debugPrint("Loading saved background video:", bgVideo)
             local success, err = pcall(function()
                 videoFrame.Video = bgVideo
                 videoFrame.Visible = true
@@ -950,18 +1010,45 @@ function Gghiza07UI:CreateWindow(config)
                 mainFrame.BackgroundTransparency = 1
                 videoFrame:Play()
             end)
-            if not success then
-                debugPrint("Failed to load background video:", err)
-                videoFrame.Visible = false
+            if success then
+                local timeout = 5
+                local elapsed = 0
+                local connection
+                connection = RunService.Heartbeat:Connect(function(deltaTime)
+                    elapsed = elapsed + deltaTime
+                    if elapsed >= timeout then
+                        connection:Disconnect()
+                        debugPrint("Saved video load timeout")
+                        if videoFrame.Video == bgVideo and not videoFrame.IsPlaying then
+                            debugPrint("Saved video still set but not playing, assuming failure")
+                            videoFrame.Video = ""
+                            videoFrame.Visible = false
+                            backgroundImage.Visible = true
+                            mainFrame.BackgroundTransparency = theme.Transparency
+                            debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                        end
+                        return
+                    end
+
+                    if videoFrame.Video == bgVideo and videoFrame.IsPlaying then
+                        debugPrint("Saved video confirmed playing")
+                        connection:Disconnect()
+                        mainFrame.BackgroundTransparency = 1
+                    end
+                end)
+            else
+                debugPrint("Failed to load saved background video:", err)
                 videoFrame.Video = ""
+                videoFrame.Visible = false
                 backgroundImage.Visible = true
-                mainFrame.BackgroundTransparency = theme.Transparency -- ใช้ Transparency ที่ตั้งไว้
+                mainFrame.BackgroundTransparency = theme.Transparency
+                debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
             end
         end
 
-        -- ถ้าไม่มีทั้งรูปภาพและวิดีโอ ใช้ Transparency จาก theme
         if not backgroundImage.Visible and not videoFrame.Visible then
             mainFrame.BackgroundTransparency = theme.Transparency
+            debugPrint("No saved image or video, MainFrame Transparency:", mainFrame.BackgroundTransparency)
         end
     end
 
