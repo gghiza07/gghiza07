@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local VERSION = "V4.11 Enhanced"
 local LOCKED = false
@@ -149,7 +150,7 @@ function Gghiza07UI:CreateWindow(config)
         theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
     end
 
-    local player = game.Players.LocalPlayer
+    local player = Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui", 10)
     if not playerGui then
         warn("PlayerGui not found")
@@ -174,6 +175,7 @@ function Gghiza07UI:CreateWindow(config)
     screenGui.DisplayOrder = 1000
     screenGui.IgnoreGuiInset = true
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    screenGui.ResetOnSpawn = false
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
@@ -196,6 +198,18 @@ function Gghiza07UI:CreateWindow(config)
     backgroundImage.ZIndex = 2
     backgroundImage.ScaleType = Enum.ScaleType.Crop
     backgroundImage.Parent = mainFrame
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(0.5, 0, 0.05, 0)
+    statusLabel.Position = UDim2.new(0.25, 0, 0, 0)
+    statusLabel.BackgroundTransparency = 0.5
+    statusLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    statusLabel.TextColor3 = theme.TextColor
+    statusLabel.Text = ""
+    statusLabel.TextScaled = true
+    statusLabel.ZIndex = 4
+    statusLabel.Parent = mainFrame
 
     local videoFrame = Instance.new("VideoFrame")
     videoFrame.Name = "BackgroundVideo"
@@ -312,6 +326,135 @@ function Gghiza07UI:CreateWindow(config)
                 toggleStartPos.X.Scale, toggleStartPos.X.Offset + delta.X,
                 toggleStartPos.Y.Scale, toggleStartPos.Y.Offset + delta.Y
             )
+        end
+    end)
+
+    -- Function to load and verify image
+    local function loadImage(imageLabel, imageId, callback)
+        if not imageId:match("^rbxassetid://%d+$") then
+            warn("Invalid Image ID format. Expected rbxassetid:// followed by numbers.")
+            statusLabel.Text = "Invalid Image ID"
+            return false
+        end
+
+        debugPrint("Attempting to load image:", imageId)
+
+        -- Reset ImageLabel
+        imageLabel.Image = ""
+        imageLabel.Visible = true
+        imageLabel.ImageTransparency = 0
+        statusLabel.Text = "Loading image..."
+
+        -- Preload image
+        local success, err = pcall(function()
+            ContentProvider:PreloadAsync({imageId})
+        end)
+
+        if not success then
+            warn("Failed to preload image:", err)
+            statusLabel.Text = "Failed to preload image"
+            imageLabel.Visible = false
+            return false
+        end
+
+        debugPrint("Image preloaded successfully")
+        imageLabel.Image = imageId
+
+        -- Verify image display
+        local timeout = 10
+        local elapsed = 0
+        local imageLoaded = false
+        local connection
+        connection = RunService.Heartbeat:Connect(function(deltaTime)
+            elapsed = elapsed + deltaTime
+            if elapsed >= timeout then
+                connection:Disconnect()
+                if not imageLoaded then
+                    debugPrint("Image load timeout")
+                    statusLabel.Text = "Image load timeout"
+                    imageLabel.Visible = false
+                    if callback then callback(false) end
+                end
+                return
+            end
+
+            if imageLabel.Image == imageId and imageLabel.ImageTransparency == 0 then
+                if imageLabel.AbsoluteSize.X > 0 and imageLabel.AbsoluteSize.Y > 0 then
+                    debugPrint("Image confirmed displayed with size:", imageLabel.AbsoluteSize.X, imageLabel.AbsoluteSize.Y)
+                    imageLoaded = true
+                    statusLabel.Text = "Image loaded successfully"
+                    if callback then callback(true) end
+                    connection:Disconnect()
+                end
+            end
+        end)
+
+        -- Monitor property changes
+        local imageConnection = imageLabel:GetPropertyChangedSignal("Image"):Connect(function()
+            debugPrint("Image property changed to:", imageLabel.Image)
+            if imageLabel.Image == "" and imageLoaded then
+                debugPrint("Image was reset unexpectedly, restoring...")
+                imageLabel.Image = imageId
+                imageLabel.Visible = true
+                imageLabel.ImageTransparency = 0
+            end
+        end)
+
+        local visibleConnection = imageLabel:GetPropertyChangedSignal("Visible"):Connect(function()
+            debugPrint("ImageLabel.Visible changed to:", imageLabel.Visible)
+            if not imageLabel.Visible and imageLoaded then
+                debugPrint("ImageLabel was hidden unexpectedly, restoring...")
+                imageLabel.Visible = true
+            end
+        end)
+
+        local transparencyConnection = imageLabel:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+            debugPrint("ImageLabel.ImageTransparency changed to:", imageLabel.ImageTransparency)
+            if imageLabel.ImageTransparency > 0 and imageLoaded then
+                debugPrint("ImageLabel transparency was changed unexpectedly, restoring...")
+                imageLabel.ImageTransparency = 0
+            end
+        end)
+
+        return true
+    end
+
+    -- Ensure UI persists on respawn
+    local lastLoadedImage = ""
+    player.CharacterAdded:Connect(function()
+        debugPrint("Character spawned, ensuring ScreenGui persists")
+        task.wait(1)
+        if not playerGui:FindFirstChild(screenGui.Name) then
+            debugPrint("ScreenGui missing, recreating...")
+            screenGui.Parent = playerGui
+            screenGui.Enabled = true
+            if lastLoadedImage ~= "" then
+                loadImage(backgroundImage, lastLoadedImage)
+            end
+        else
+            screenGui.Parent = nil
+            screenGui.Parent = playerGui
+            screenGui.Enabled = true
+            if lastLoadedImage ~= "" then
+                backgroundImage.Image = lastLoadedImage
+                backgroundImage.Visible = true
+                backgroundImage.ImageTransparency = 0
+            end
+        end
+    end)
+
+    -- Monitor ScreenGui removal
+    screenGui.AncestryChanged:Connect(function(child, parent)
+        debugPrint("AncestryChanged triggered, parent:", parent)
+        if parent == nil then
+            debugPrint("ScreenGui was removed, reparenting to PlayerGui")
+            screenGui.Parent = playerGui
+            screenGui.Enabled = true
+            if lastLoadedImage ~= "" then
+                backgroundImage.Image = lastLoadedImage
+                backgroundImage.Visible = true
+                backgroundImage.ImageTransparency = 0
+            end
         end
     end)
 
@@ -503,7 +646,7 @@ function Gghiza07UI:CreateWindow(config)
             local sliderLabel = Instance.new("TextLabel")
             sliderLabel.Size = UDim2.new(1, 0, 0.4, 0)
             sliderLabel.BackgroundTransparency = 1
-            sliderLabel.Text = sliderConfig.Name or "Slider"
+            sliderLabelCOPilot Text = sliderConfig.Name or "Slider"
             sliderLabel.TextColor3 = theme.TextColor
             sliderLabel.TextScaled = true
             sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -753,60 +896,24 @@ function Gghiza07UI:CreateWindow(config)
             bgTab:AddInput({
                 Name = "Image ID (rbxassetid://)",
                 Callback = function(value)
-                    if value:match("^rbxassetid://%d+$") then
-                        debugPrint("Attempting to load image:", value)
-                        local success, err = pcall(function()
-                            ContentProvider:PreloadAsync({value})
-                        end)
+                    loadImage(backgroundImage, value, function(success)
                         if success then
-                            debugPrint("Image preloaded successfully")
-                            backgroundImage.Image = value
                             videoFrame.Visible = false
                             backgroundImage.Visible = true
                             backgroundImage.ZIndex = 5
                             mainFrame.BackgroundTransparency = 1
-                            debugPrint("BackgroundImage Visible:", backgroundImage.Visible, "ZIndex:", backgroundImage.ZIndex)
-                            debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
-
-                            local timeout = 5
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    debugPrint("Image load timeout")
-                                    if backgroundImage.Image == value then
-                                        debugPrint("Image still set but not displayed, assuming failure")
-                                        backgroundImage.Image = ""
-                                        backgroundImage.Visible = false
-                                        mainFrame.BackgroundTransparency = theme.Transparency
-                                        debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
-                                    end
-                                    return
-                                end
-
-                                if backgroundImage.Image == value and backgroundImage.ImageTransparency == 0 then
-                                    debugPrint("Image confirmed displayed")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(BACKGROUND_FILE, value)
-                                end
-                            end)
+                            lastLoadedImage = value
+                            saveData(BACKGROUND_FILE, value)
+                            debugPrint("BackgroundImage loaded and saved:", value)
                         else
-                            warn("Failed to preload image:", err)
                             backgroundImage.Image = ""
                             backgroundImage.Visible = false
                             mainFrame.BackgroundTransparency = theme.Transparency
-                            debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                            lastLoadedImage = ""
+                            saveData(BACKGROUND_FILE, "")
+                            debugPrint("Failed to load BackgroundImage, reset to default")
                         end
-                    else
-                        warn("Invalid Image ID format")
-                        backgroundImage.Image = ""
-                        backgroundImage.Visible = false
-                        mainFrame.BackgroundTransparency = theme.Transparency
-                        debugPrint("Invalid Image ID, MainFrame Transparency:", mainFrame.BackgroundTransparency)
-                    end
+                    end)
                 end
             })
             
@@ -934,6 +1041,7 @@ function Gghiza07UI:CreateWindow(config)
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
                         saveData(ELEMENTS_FILE, elementStates)
+                        lastLoadedImage = ""
                         debugPrint("Settings reset successfully")
                     else
                         warn("Failed to reset settings:", err)
@@ -954,49 +1062,22 @@ function Gghiza07UI:CreateWindow(config)
         local bgImage = loadData(BACKGROUND_FILE, "")
         if bgImage and bgImage ~= "" then
             debugPrint("Loading saved background image:", bgImage)
-            local success, err = pcall(function()
-                ContentProvider:PreloadAsync({bgImage})
+            loadImage(backgroundImage, bgImage, function(success)
+                if success then
+                    backgroundImage.Visible = true
+                    backgroundImage.ZIndex = 5
+                    mainFrame.BackgroundTransparency = 1
+                    videoFrame.Visible = false
+                    lastLoadedImage = bgImage
+                    debugPrint("Saved background image loaded successfully")
+                else
+                    backgroundImage.Image = ""
+                    backgroundImage.Visible = false
+                    mainFrame.BackgroundTransparency = theme.Transparency
+                    lastLoadedImage = ""
+                    debugPrint("Failed to load saved background image, reset to default")
+                end
             end)
-            if success then
-                debugPrint("Saved image preloaded successfully")
-                backgroundImage.Image = bgImage
-                backgroundImage.Visible = true
-                backgroundImage.ZIndex = 5
-                mainFrame.BackgroundTransparency = 1
-                videoFrame.Visible = false
-                debugPrint("After loading - BackgroundImage Image:", backgroundImage.Image)
-
-                local timeout = 5
-                local elapsed = 0
-                local connection
-                connection = RunService.Heartbeat:Connect(function(deltaTime)
-                    elapsed = elapsed + deltaTime
-                    if elapsed >= timeout then
-                        connection:Disconnect()
-                        debugPrint("Saved image load timeout")
-                        if backgroundImage.Image == bgImage then
-                            debugPrint("Saved image still set but not displayed, assuming failure")
-                            backgroundImage.Image = ""
-                            backgroundImage.Visible = false
-                            mainFrame.BackgroundTransparency = theme.Transparency
-                            debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
-                        end
-                        return
-                    end
-
-                    if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 0 then
-                        debugPrint("Saved image confirmed displayed")
-                        connection:Disconnect()
-                        mainFrame.BackgroundTransparency = 1
-                    end
-                end)
-            else
-                debugPrint("Failed to load saved background image:", err)
-                backgroundImage.Image = ""
-                backgroundImage.Visible = false
-                mainFrame.BackgroundTransparency = theme.Transparency
-                debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
-            end
         end
 
         local bgVideo = loadData(VIDEO_FILE, "")
@@ -1053,6 +1134,26 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     loadSettings()
+
+    -- Debug loop to monitor UI state
+    spawn(function()
+        while true do
+            if not playerGui:FindFirstChild(screenGui.Name) then
+                debugPrint("ScreenGui disappeared unexpectedly!")
+                break
+            end
+            if backgroundImage.Image == "" and lastLoadedImage ~= "" then
+                debugPrint("BackgroundImage was cleared unexpectedly!")
+            end
+            if not backgroundImage.Visible and lastLoadedImage ~= "" then
+                debugPrint("BackgroundImage was hidden unexpectedly!")
+            end
+            if backgroundImage.ImageTransparency > 0 and lastLoadedImage ~= "" then
+                debugPrint("BackgroundImage transparency was increased unexpectedly!")
+            end
+            task.wait(1)
+        end
+    end)
 
     return window
 end
