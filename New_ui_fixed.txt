@@ -756,26 +756,19 @@ function Gghiza07UI:CreateWindow(config)
                     if value:match("^rbxassetid://%d+$") then
                         debugPrint("Attempting to load image:", value)
                         local success, err = pcall(function()
-                            -- รีเซ็ตสถานะก่อนโหลด
-                            backgroundImage.Image = ""
-                            backgroundImage.Visible = false
-                            mainFrame.BackgroundTransparency = theme.Transparency
-                            videoFrame.Visible = false
-
-                            -- โหลดภาพ
                             ContentProvider:PreloadAsync({value})
-                            backgroundImage.Image = value
                         end)
-
                         if success then
                             debugPrint("Image preloaded successfully")
+                            backgroundImage.Image = value
+                            videoFrame.Visible = false
                             backgroundImage.Visible = true
                             backgroundImage.ZIndex = 5
                             mainFrame.BackgroundTransparency = 1
-                            videoFrame.Visible = false
+                            debugPrint("BackgroundImage Visible:", backgroundImage.Visible, "ZIndex:", backgroundImage.ZIndex)
+                            debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
 
-                            -- ตรวจสอบว่าภาพโหลดสำเร็จและแสดงผล
-                            local timeout = 10
+                            local timeout = 5
                             local elapsed = 0
                             local connection
                             connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -783,17 +776,18 @@ function Gghiza07UI:CreateWindow(config)
                                 if elapsed >= timeout then
                                     connection:Disconnect()
                                     debugPrint("Image load timeout")
-                                    if backgroundImage.Image == value and not backgroundImage:IsLoaded() then
-                                        debugPrint("Image set but not loaded, assuming failure")
+                                    if backgroundImage.Image == value then
+                                        debugPrint("Image still set but not displayed, assuming failure")
                                         backgroundImage.Image = ""
                                         backgroundImage.Visible = false
                                         mainFrame.BackgroundTransparency = theme.Transparency
+                                        debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                                     end
                                     return
                                 end
 
-                                if backgroundImage.Image == value and backgroundImage:IsLoaded() then
-                                    debugPrint("Image confirmed loaded and displayed")
+                                if backgroundImage.Image == value and backgroundImage.ImageTransparency == 0 then
+                                    debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
                                     saveData(BACKGROUND_FILE, value)
@@ -884,7 +878,7 @@ function Gghiza07UI:CreateWindow(config)
                 Callback = function(value)
                     debugPrint("Setting Transparency to:", value)
                     theme.Transparency = value
-                    local isImageDisplayed = backgroundImage.Visible and backgroundImage.Image ~= "" and backgroundImage:IsLoaded()
+                    local isImageDisplayed = backgroundImage.Visible and backgroundImage.Image ~= "" and backgroundImage.ImageTransparency == 0
                     local isVideoPlaying = videoFrame.Visible and videoFrame.Video ~= "" and videoFrame.IsPlaying
                     if not isImageDisplayed and not isVideoPlaying then
                         mainFrame.BackgroundTransparency = value
@@ -954,26 +948,25 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local function loadSettings()
-        backgroundImage.Visible = false -- รีเซ็ตสถานะเริ่มต้น
+        backgroundImage.Visible = true
         videoFrame.Visible = false
-        mainFrame.BackgroundTransparency = theme.Transparency
 
         local bgImage = loadData(BACKGROUND_FILE, "")
         if bgImage and bgImage ~= "" then
             debugPrint("Loading saved background image:", bgImage)
             local success, err = pcall(function()
                 ContentProvider:PreloadAsync({bgImage})
-                backgroundImage.Image = bgImage
             end)
-
             if success then
                 debugPrint("Saved image preloaded successfully")
+                backgroundImage.Image = bgImage
                 backgroundImage.Visible = true
                 backgroundImage.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
+                debugPrint("After loading - BackgroundImage Image:", backgroundImage.Image)
 
-                local timeout = 10
+                local timeout = 5
                 local elapsed = 0
                 local connection
                 connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -981,17 +974,18 @@ function Gghiza07UI:CreateWindow(config)
                     if elapsed >= timeout then
                         connection:Disconnect()
                         debugPrint("Saved image load timeout")
-                        if backgroundImage.Image == bgImage and not backgroundImage:IsLoaded() then
-                            debugPrint("Saved image set but not loaded, assuming failure")
+                        if backgroundImage.Image == bgImage then
+                            debugPrint("Saved image still set but not displayed, assuming failure")
                             backgroundImage.Image = ""
                             backgroundImage.Visible = false
                             mainFrame.BackgroundTransparency = theme.Transparency
+                            debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                         end
                         return
                     end
 
-                    if backgroundImage.Image == bgImage and backgroundImage:IsLoaded() then
-                        debugPrint("Saved image confirmed loaded and displayed")
+                    if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 0 then
+                        debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
                     end
@@ -1001,6 +995,7 @@ function Gghiza07UI:CreateWindow(config)
                 backgroundImage.Image = ""
                 backgroundImage.Visible = false
                 mainFrame.BackgroundTransparency = theme.Transparency
+                debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
             end
         end
 
@@ -1016,7 +1011,7 @@ function Gghiza07UI:CreateWindow(config)
                 videoFrame:Play()
             end)
             if success then
-                local timeout = 10
+                local timeout = 5
                 local elapsed = 0
                 local connection
                 connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -1025,11 +1020,12 @@ function Gghiza07UI:CreateWindow(config)
                         connection:Disconnect()
                         debugPrint("Saved video load timeout")
                         if videoFrame.Video == bgVideo and not videoFrame.IsPlaying then
-                            debugPrint("Saved video set but not playing, assuming failure")
+                            debugPrint("Saved video still set but not playing, assuming failure")
                             videoFrame.Video = ""
                             videoFrame.Visible = false
-                            backgroundImage.Visible = false
+                            backgroundImage.Visible = true
                             mainFrame.BackgroundTransparency = theme.Transparency
+                            debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
                         end
                         return
                     end
@@ -1044,8 +1040,9 @@ function Gghiza07UI:CreateWindow(config)
                 debugPrint("Failed to load saved background video:", err)
                 videoFrame.Video = ""
                 videoFrame.Visible = false
-                backgroundImage.Visible = false
+                backgroundImage.Visible = true
                 mainFrame.BackgroundTransparency = theme.Transparency
+                debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
             end
         end
 
