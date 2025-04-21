@@ -7,7 +7,7 @@ local RunService = game:GetService("RunService")
 
 local VERSION = "V4.12 Enhanced"
 local LOCKED = false
-local DEBUG_MODE = true
+local DEBUG_MODE = false
 
 local function debugPrint(...)
     if DEBUG_MODE then
@@ -483,7 +483,9 @@ function Gghiza07UI:CreateWindow(config)
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
                 if toggleConfig.Callback then
-                    local success, err = pcall(toggleConfig.Callback, toggleState)
+                    local success, err = pcall(function()
+                        toggleConfig.Callback(toggleState)
+                    end)
                     if not success then
                         debugPrint("Toggle callback error:", err)
                     end
@@ -574,7 +576,9 @@ function Gghiza07UI:CreateWindow(config)
                         sliderFill.Size = UDim2.new(newValue, 0, 1, 0)
                         valueLabel.Text = string.format("%.2f", value)
                         if sliderConfig.Callback then
-                            local success, err = pcall(sliderConfig.Callback, value)
+                            local success, err = pcall(function()
+                                sliderConfig.Callback(value)
+                            end)
                             if not success then
                                 debugPrint("Slider callback error:", err)
                             end
@@ -651,7 +655,9 @@ function Gghiza07UI:CreateWindow(config)
                     dropdownButton.Text = tostring(option)
                     dropdownList.Visible = false
                     if dropdownConfig.Callback then
-                        local success, err = pcall(dropdownConfig.Callback, option)
+                        local success, err = pcall(function()
+                            dropdownConfig.Callback(option)
+                        end)
                         if not success then
                             debugPrint("Dropdown callback error:", err)
                         end
@@ -719,7 +725,9 @@ function Gghiza07UI:CreateWindow(config)
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
                     if inputConfig.Callback then
-                        local success, err = pcall(inputConfig.Callback, textBox.Text)
+                        local success, err = pcall(function()
+                            inputConfig.Callback(textBox.Text)
+                        end)
                         if not success then
                             debugPrint("Input callback error:", err)
                         end
@@ -762,9 +770,7 @@ function Gghiza07UI:CreateWindow(config)
             bgTab:AddInput({
                 Name = "Image ID (Number only, e.g., 5191098772)",
                 Callback = function(value)
-                    -- ตรวจสอบว่าเป็นตัวเลขเท่านั้น
                     if value:match("^%d+$") then
-                        -- แปลงตัวเลขให้เป็น rbxthumb://type=Asset&id=<Id>&w=420&h=420
                         local thumbId = string.format("rbxthumb://type=Asset&id=%s&w=420&h=420", value)
                         debugPrint("Using rbxthumb:// format:", thumbId)
 
@@ -785,7 +791,7 @@ function Gghiza07UI:CreateWindow(config)
 
                         if success then
                             debugPrint("Image preloaded successfully after retries")
-                            imageLabel.Image = thumbId -- ใช้ rbxthumb:// โดยตรง
+                            imageLabel.Image = thumbId
                             videoFrame.Visible = false
                             imageLabel.Visible = true
                             imageLabel.ZIndex = 5
@@ -818,13 +824,12 @@ function Gghiza07UI:CreateWindow(config)
                                     debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
-                                    -- เก็บในรูปแบบ rbxthumb://
                                     saveData(BACKGROUND_FILE, thumbId)
                                 end
                             end)
                         else
                             warn("Failed to preload image after", retries, "attempts, trying direct load")
-                            imageLabel.Image = thumbId -- ใช้ rbxthumb:// โดยตรง
+                            imageLabel.Image = thumbId
                             videoFrame.Visible = false
                             imageLabel.Visible = true
                             imageLabel.ZIndex = 5
@@ -856,7 +861,6 @@ function Gghiza07UI:CreateWindow(config)
                                     debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
-                                    -- เก็บในรูปแบบ rbxthumb://
                                     saveData(BACKGROUND_FILE, thumbId)
                                 end
                             end)
@@ -1019,7 +1023,6 @@ function Gghiza07UI:CreateWindow(config)
         local bgImage = loadData(BACKGROUND_FILE, "")
         if bgImage and bgImage ~= "" then
             debugPrint("Loading saved background image:", bgImage)
-            -- ตรวจสอบว่า bgImage เป็น rbxthumb://
             if bgImage:match("^rbxthumb://type=Asset&id=%d+&w=%d+&h=%d+$") then
                 debugPrint("Saved image is in rbxthumb:// format, loading directly:", bgImage)
             else
@@ -1044,7 +1047,7 @@ function Gghiza07UI:CreateWindow(config)
 
             if success then
                 debugPrint("Saved image preloaded successfully")
-                imageLabel.Image = bgImage -- ใช้ rbxthumb:// โดยตรง
+                imageLabel.Image = bgImage
                 imageLabel.Visible = true
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
@@ -1076,7 +1079,7 @@ function Gghiza07UI:CreateWindow(config)
                 end)
             else
                 debugPrint("Failed to preload saved image after retries, trying direct load")
-                imageLabel.Image = bgImage -- ใช้ rbxthumb:// โดยตรง
+                imageLabel.Image = bgImage
                 imageLabel.Visible = true
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
