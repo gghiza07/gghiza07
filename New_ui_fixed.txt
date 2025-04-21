@@ -4,7 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
-local TextService = game:GetService("TextService")
+local SoundService = game:GetService("SoundService")
 
 local VERSION = "V0.1"
 local LOCKED = false
@@ -48,12 +48,13 @@ function Gghiza07UI:CreateWindow(config)
     local VIDEO_FILE = SETTINGS_FOLDER .. "/video.txt"
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
+    local SOUND_FILE = SETTINGS_FOLDER .. "/sound.json"
     local KEY_FILE = SETTINGS_FOLDER .. "/" .. (config.Keyconfig and config.Keyconfig.FileName or "key") .. ".txt"
 
     local elementStates = {
         Toggles = {},
         Inputs = {},
-        MultiDropdowns = {}
+        Dropdowns = {}
     }
 
     local defaultTheme = {
@@ -64,7 +65,7 @@ function Gghiza07UI:CreateWindow(config)
         Transparency = 0.2
     }
 
-    local saveSetting = config.SaveSetting ~= false -- Default to true if not specified
+    local saveSetting = config.SaveSetting ~= false
 
     local function color3ToTable(color)
         return {
@@ -128,10 +129,10 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, MultiDropdowns = {}})
+    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, Dropdowns = {}})
     if not isfile(ELEMENTS_FILE) then
         debugPrint("No elements file found, resetting elementStates")
-        elementStates = {Toggles = {}, Inputs = {}, MultiDropdowns = {}}
+        elementStates = {Toggles = {}, Inputs = {}, Dropdowns = {}}
     end
 
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
@@ -366,70 +367,111 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
-    local isAnimating = false
+    -- Sound object
+    local buttonClickSound = Instance.new("Sound")
+    buttonClickSound.Name = "ButtonClickSound"
+    buttonClickSound.SoundId = ""
+    buttonClickSound.Parent = screenGui
+    buttonClickSound.Volume = 1
+
+    local savedSound = loadData(SOUND_FILE, {SoundId = ""})
+    if savedSound and savedSound.SoundId and savedSound.SoundId ~= "" then
+        buttonClickSound.SoundId = "rbxassetid://" .. savedSound.SoundId
+        debugPrint("Loaded saved Sound ID:", buttonClickSound.SoundId)
+    end
+
+    -- Notification system
+    local notifications = {}
+    local NOTIFICATION_HEIGHT = 50
+    local NOTIFICATION_SPACING = 10
+    local NOTIFICATION_DURATION = 2
+
+    local function updateNotificationPositions()
+        for i, notif in ipairs(notifications) do
+            local targetY = 10 + (i - 1) * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING)
+            TweenService:Create(notif.Frame, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Position = UDim2.new(1, -210, 0, targetY)
+            }):Play()
+        end
+    end
+
+    local function showNotification(message)
+        local notificationFrame = Instance.new("Frame")
+        notificationFrame.Size = UDim2.new(0, 200, 0, NOTIFICATION_HEIGHT)
+        notificationFrame.Position = UDim2.new(1, -210, 0, 10 + #notifications * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING))
+        notificationFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        notificationFrame.BackgroundTransparency = 0.2
+        notificationFrame.ZIndex = 1002
+        notificationFrame.Parent = screenGui
+
+        local cornerNotif = Instance.new("UICorner")
+        cornerNotif.CornerRadius = UDim.new(0, 5)
+        cornerNotif.Parent = notificationFrame
+
+        local notifLabel = Instance.new("TextLabel")
+        notifLabel.Size = UDim2.new(1, -10, 1, -10)
+        notifLabel.Position = UDim2.new(0, 5, 0, 5)
+        notifLabel.BackgroundTransparency = 1
+        notifLabel.Text = message
+        notifLabel.TextColor3 = theme.TextColor
+        notifLabel.TextScaled = true
+        notifLabel.ZIndex = 1003
+        notifLabel.Parent = notificationFrame
+
+        local notif = {Frame = notificationFrame}
+        table.insert(notifications, notif)
+
+        local fadeIn = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {BackgroundTransparency = 0})
+        local fadeOut = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+
+        fadeIn:Play()
+        fadeIn.Completed:Wait()
+        task.wait(NOTIFICATION_DURATION)
+        fadeOut:Play()
+        fadeOut.Completed:Connect(function()
+            table.remove(notifications, table.find(notifications, notif))
+            notificationFrame:Destroy()
+            updateNotificationPositions()
+        end)
+
+        updateNotificationPositions()
+
+        if buttonClickSound.SoundId ~= "" then
+            buttonClickSound:Play()
+        end
+    end
 
     local function toggleUI(state)
-        if isAnimating then return end
-        isAnimating = true
+        local isVisible = mainFrame.Visible
+        local targetState = state ~= nil and state or not isVisible
 
-        local tweenInfo = TweenInfo.new(
-            0.5,
-            Enum.EasingStyle.Quart,
-            Enum.EasingDirection.Out
-        )
-
-        if state ~= nil then
-            mainFrame.Visible = true
-            if state then
-                mainFrame.Size = UDim2.new(0, 0, 0, 0)
-                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-                local openTween = TweenService:Create(mainFrame, tweenInfo, {
-                    Size = UDim2.new(0.8, 0, 0.8, 0),
-                    Position = UDim2.new(0.1, 0, 0.1, 0)
-                })
-                openTween:Play()
-                openTween.Completed:Connect(function()
-                    isAnimating = false
-                end)
-            else
-                local closeTween = TweenService:Create(mainFrame, tweenInfo, {
-                    Size = UDim2.new(0, 0, 0, 0),
-                    Position = UDim2.new(0.5, 0, 0.5, 0)
-                })
-                closeTween:Play()
-                closeTween.Completed:Connect(function()
-                    mainFrame.Visible = false
-                    isAnimating = false
-                end)
-            end
-        else
-            if mainFrame.Visible then
-                local closeTween = TweenService:Create(mainFrame, tweenInfo, {
-                    Size = UDim2.new(0, 0, 0, 0),
-                    Position = UDim2.new(0.5, 0, 0.5, 0)
-                })
-                closeTween:Play()
-                closeTween.Completed:Connect(function()
-                    mainFrame.Visible = false
-                    isAnimating = false
-                end)
-            else
-                mainFrame.Visible = true
-                mainFrame.Size = UDim2.new(0, 0, 0, 0)
-                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-                local openTween = TweenService:Create(mainFrame, tweenInfo, {
-                    Size = UDim2.new(0.8, 0, 0.8, 0),
-                    Position = UDim2.new(0.1, 0, 0.1, 0)
-                })
-                openTween:Play()
-                openTween.Completed:Connect(function()
-                    isAnimating = false
-                end)
-            end
+        if targetState == isVisible then
+            return
         end
-        
-        toggleButton.Text = mainFrame.Visible and "ON" or "OFF"
-        toggleButton.BackgroundColor3 = mainFrame.Visible and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+
+        if targetState then
+            mainFrame.Visible = true
+            mainFrame.Position = UDim2.new(0.1, 0, -0.8, 0)
+            local slideIn = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.1, 0, 0.1, 0)})
+            slideIn:Play()
+            toggleButton.Text = "ON"
+            toggleButton.BackgroundColor3 = theme.AccentColor
+        else
+            local slideOut = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.1, 0, -0.8, 0)})
+            slideOut:Play()
+            slideOut.Completed:Connect(function()
+                mainFrame.Visible = false
+            end)
+            toggleButton.Text = "OFF"
+            toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        end
+
+        if buttonClickSound.SoundId ~= "" then
+            buttonClickSound:Play()
+        else
+            debugPrint("No sound set for toggleUI")
+        end
+        showNotification("UI " .. (targetState and "Opened" or "Closed"))
     end
 
     toggleButton.MouseButton1Click:Connect(toggleUI)
@@ -480,9 +522,17 @@ function Gghiza07UI:CreateWindow(config)
                 mainFrame.Visible = true
                 toggleButton.Visible = true
                 debugPrint("Key verified successfully")
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                end
+                showNotification("Key verified")
             else
                 keyInput.Text = ""
                 keyInput.PlaceholderText = "Invalid key, try again"
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                end
+                showNotification("Invalid key")
             end
         end)
 
@@ -495,8 +545,13 @@ function Gghiza07UI:CreateWindow(config)
                     copyKeyLinkButton.Text = "Copied!"
                     task.wait(1)
                     copyKeyLinkButton.Text = "Copy Key Link"
+                    if buttonClickSound.SoundId ~= "" then
+                        buttonClickSound:Play()
+                    end
+                    showNotification("Key link copied")
                 else
                     warn("Failed to copy key link:", err)
+                    showNotification("Failed to copy key link")
                 end
             end
         end)
@@ -579,6 +634,11 @@ function Gghiza07UI:CreateWindow(config)
                 end
             end
             tabButton.BackgroundColor3 = theme.AccentColor
+
+            if buttonClickSound.SoundId ~= "" then
+                buttonClickSound:Play()
+            end
+            showNotification("Switched to " .. tabName)
         end
 
         tabButton.MouseButton1Click:Connect(selectTab)
@@ -608,6 +668,11 @@ function Gghiza07UI:CreateWindow(config)
             cornerButton.Parent = button
 
             button.MouseButton1Click:Connect(function()
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                end
+                showNotification("Clicked " .. (buttonConfig.Name or "Button"))
+
                 if buttonConfig.Callback then
                     local success, err = pcall(buttonConfig.Callback)
                     if not success then
@@ -675,6 +740,12 @@ function Gghiza07UI:CreateWindow(config)
                 toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
+                
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                end
+                showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
+
                 if toggleConfig.Callback then
                     local success, err = pcall(function()
                         toggleConfig.Callback(toggleState)
@@ -768,6 +839,12 @@ function Gghiza07UI:CreateWindow(config)
                         value = min + (max - min) * newValue
                         sliderFill.Size = UDim2.new(newValue, 0, 1, 0)
                         valueLabel.Text = string.format("%.2f", value)
+
+                        if buttonClickSound.SoundId ~= "" then
+                            buttonClickSound:Play()
+                        end
+                        showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
+
                         if sliderConfig.Callback then
                             local success, err = pcall(function()
                                 sliderConfig.Callback(value)
@@ -827,107 +904,28 @@ function Gghiza07UI:CreateWindow(config)
             listLayout.SortOrder = Enum.SortOrder.LayoutOrder
             listLayout.Parent = dropdownList
 
+            local isMulti = dropdownConfig.Multi or false
+            local maxSelections = dropdownConfig.MaxSelections or math.huge
+            local selectedOptions = {}
+            if elementStates.Dropdowns[dropdownConfig.Name] then
+                selectedOptions = elementStates.Dropdowns[dropdownConfig.Name]
+                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or dropdownConfig.Name
+            elseif not isMulti and dropdownConfig.Default then
+                selectedOptions = {dropdownConfig.Default}
+                dropdownButton.Text = dropdownConfig.Default
+            end
+
             local function updateListHeight()
                 dropdownList.Size = UDim2.new(1, 0, 0, #dropdownConfig.Options * 30)
             end
 
-            for i, option in ipairs(dropdownConfig.Options) do
-                local optionButton = Instance.new("TextButton")
-                optionButton.Size = UDim2.new(1, 0, 0, 30)
-                optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                optionButton.Text = tostring(option)
-                optionButton.TextColor3 = theme.TextColor
-                optionButton.TextScaled = true
-                optionButton.ZIndex = 13
-                optionButton.LayoutOrder = i
-                optionButton.Active = true
-                optionButton.AutoButtonColor = true
-                optionButton.Parent = dropdownList
-
-                optionButton.MouseButton1Click:Connect(function()
-                    dropdownButton.Text = tostring(option)
-                    dropdownList.Visible = false
-                    if dropdownConfig.Callback then
-                        local success, err = pcall(function()
-                            dropdownConfig.Callback(option)
-                        end)
-                        if not success then
-                            debugPrint("Dropdown callback error:", err)
-                        end
-                    end
-                end)
-            end
-
-            updateListHeight()
-
-            dropdownButton.MouseButton1Click:Connect(function()
-                dropdownList.Visible = not dropdownList.Visible
-            end)
-
-            updateCanvasSize()
-            return dropdownFrame
-        end
-
-        function tab:AddMultiDropdown(multiDropdownConfig)
-            if not multiDropdownConfig or type(multiDropdownConfig) ~= "table" or not multiDropdownConfig.Options then
-                warn("Invalid multi-dropdown config. Expected a table with Options.")
-                return
-            end
-
-            local dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Name = multiDropdownConfig.Name or "MultiDropdown"
-            dropdownFrame.Size = UDim2.new(1, -20, 0, 40)
-            dropdownFrame.BackgroundTransparency = 1
-            dropdownFrame.LayoutOrder = #tabContent:GetChildren()
-            dropdownFrame.ZIndex = 11
-            dropdownFrame.Active = true
-            dropdownFrame.Parent = tabContent
-
-            local dropdownButton = Instance.new("TextButton")
-            dropdownButton.Size = UDim2.new(1, 0, 1, 0)
-            dropdownButton.BackgroundColor3 = theme.AccentColor
-            dropdownButton.Text = multiDropdownConfig.Name or "Select Options"
-            dropdownButton.TextColor3 = theme.TextColor
-            dropdownButton.TextScaled = true
-            dropdownButton.ZIndex = 11
-            dropdownButton.Active = true
-            dropdownButton.AutoButtonColor = true
-            dropdownButton.Parent = dropdownFrame
-
-            local cornerDropdown = Instance.new("UICorner")
-            cornerDropdown.CornerRadius = UDim.new(0, 5)
-            cornerDropdown.Parent = dropdownButton
-
-            local dropdownList = Instance.new("Frame")
-            dropdownList.Size = UDim2.new(1, 0, 0, 0)
-            dropdownList.Position = UDim2.new(0, 0, 1, 0)
-            dropdownList.BackgroundColor3 = theme.BackgroundColor
-            dropdownList.Visible = false
-            dropdownList.ZIndex = 12
-            dropdownList.Active = true
-            dropdownList.Parent = dropdownFrame
-
-            local listLayout = Instance.new("UIListLayout")
-            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            listLayout.Parent = dropdownList
-
-            local selectedOptions = {}
-            if elementStates.MultiDropdowns[multiDropdownConfig.Name] then
-                selectedOptions = elementStates.MultiDropdowns[multiDropdownConfig.Name]
-                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
-            end
-
-            local function updateListHeight()
-                dropdownList.Size = UDim2.new(1, 0, 0, #multiDropdownConfig.Options * 30)
-            end
-
             local function updateButtonText()
-                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
-                elementStates.MultiDropdowns[multiDropdownConfig.Name] = selectedOptions
+                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or dropdownConfig.Name
+                elementStates.Dropdowns[dropdownConfig.Name] = selectedOptions
                 saveData(ELEMENTS_FILE, elementStates)
             end
 
-            for i, option in ipairs(multiDropdownConfig.Options) do
+            for i, option in ipairs(dropdownConfig.Options) do
                 local optionFrame = Instance.new("Frame")
                 optionFrame.Size = UDim2.new(1, 0, 0, 30)
                 optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -936,54 +934,78 @@ function Gghiza07UI:CreateWindow(config)
                 optionFrame.Parent = dropdownList
 
                 local checkbox = Instance.new("TextButton")
-                checkbox.Size = UDim2.new(0.1, 0, 0.6, 0)
-                checkbox.Position = UDim2.new(0.05, 0, 0.2, 0)
+                checkbox.Size = UDim2.new(isMulti and 0.1 or 0, 0, 0.6, 0)
+                checkbox.Position = UDim2.new(isMulti and 0.05 or 0, 0, 0.2, 0)
                 checkbox.BackgroundColor3 = table.find(selectedOptions, option) and theme.AccentColor or Color3.fromRGB(100, 100, 100)
                 checkbox.Text = table.find(selectedOptions, option) and "✓" or ""
                 checkbox.TextColor3 = theme.TextColor
                 checkbox.TextScaled = true
                 checkbox.ZIndex = 14
+                checkbox.Visible = isMulti
                 checkbox.Active = true
                 checkbox.AutoButtonColor = true
                 checkbox.Parent = optionFrame
 
-                local optionLabel = Instance.new("TextLabel")
-                optionLabel.Size = UDim2.new(0.8, 0, 1, 0)
-                optionLabel.Position = UDim2.new(0.15, 0, 0, 0)
+                local optionLabel = Instance.new("TextButton")
+                optionLabel.Size = UDim2.new(isMulti and 0.8 or 1, 0, 1, 0)
+                optionLabel.Position = UDim2.new(isMulti and 0.15 or 0, 0, 0, 0)
                 optionLabel.BackgroundTransparency = 1
                 optionLabel.Text = tostring(option)
                 optionLabel.TextColor3 = theme.TextColor
                 optionLabel.TextScaled = true
                 optionLabel.TextXAlignment = Enum.TextXAlignment.Left
                 optionLabel.ZIndex = 14
+                optionLabel.Active = true
+                optionLabel.AutoButtonColor = true
                 optionLabel.Parent = optionFrame
 
-                checkbox.MouseButton1Click:Connect(function()
-                    if table.find(selectedOptions, option) then
-                        table.remove(selectedOptions, table.find(selectedOptions, option))
-                        checkbox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-                        checkbox.Text = ""
+                local function handleSelection()
+                    if isMulti then
+                        if table.find(selectedOptions, option) then
+                            table.remove(selectedOptions, table.find(selectedOptions, option))
+                            checkbox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+                            checkbox.Text = ""
+                        else
+                            if #selectedOptions < maxSelections then
+                                table.insert(selectedOptions, option)
+                                checkbox.BackgroundColor3 = theme.AccentColor
+                                checkbox.Text = "✓"
+                            else
+                                showNotification("Maximum selections reached")
+                                return
+                            end
+                        end
                     else
-                        table.insert(selectedOptions, option)
-                        checkbox.BackgroundColor3 = theme.AccentColor
-                        checkbox.Text = "✓"
+                        selectedOptions = {option}
+                        dropdownList.Visible = false
                     end
                     updateButtonText()
-                    if multiDropdownConfig.Callback then
+                    if buttonClickSound.SoundId ~= "" then
+                        buttonClickSound:Play()
+                    end
+                    showNotification("Selected " .. (isMulti and tostring(option) or table.concat(selectedOptions, ", ")))
+                    if dropdownConfig.Callback then
                         local success, err = pcall(function()
-                            multiDropdownConfig.Callback(selectedOptions)
+                            dropdownConfig.Callback(isMulti and selectedOptions or selectedOptions[1])
                         end)
                         if not success then
-                            debugPrint("MultiDropdown callback error:", err)
+                            debugPrint("Dropdown callback error:", err)
                         end
                     end
-                end)
+                end
+
+                checkbox.MouseButton1Click:Connect(handleSelection)
+                optionLabel.MouseButton1Click:Connect(handleSelection)
             end
 
             updateListHeight()
 
             dropdownButton.MouseButton1Click:Connect(function()
                 dropdownList.Visible = not dropdownList.Visible
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                end
+                showNotification("Dropdown " .. (dropdownList.Visible and "Opened" or "Closed"))
             end)
 
             updateCanvasSize()
@@ -1039,6 +1061,12 @@ function Gghiza07UI:CreateWindow(config)
                 if enterPressed then
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
+
+                    if buttonClickSound.SoundId ~= "" then
+                        buttonClickSound:Play()
+                    end
+                    showNotification("Input updated: " .. textBox.Text)
+
                     if inputConfig.Callback then
                         local success, err = pcall(function()
                             inputConfig.Callback(textBox.Text)
@@ -1075,9 +1103,10 @@ function Gghiza07UI:CreateWindow(config)
                             Transparency = theme.Transparency
                         }
                         saveData(THEME_FILE, themeToSave)
-                        debugPrint("MainFrame BackgroundColor3:", mainFrame.BackgroundColor3.R * 255, mainFrame.BackgroundColor3.G * 255, mainFrame.BackgroundColor3.B * 255)
+                        showNotification("Background color updated")
                     else
                         warn("Invalid RGB format. Use: R,G,B (e.g., 30,30,30)")
+                        showNotification("Invalid RGB format")
                     end
                 end
             })
@@ -1112,73 +1141,15 @@ function Gghiza07UI:CreateWindow(config)
                             imageLabel.ZIndex = 5
                             imageLabel.ImageTransparency = 0
                             mainFrame.BackgroundTransparency = 1
-
-                            local timeout = 20
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    debugPrint("Image load timeout")
-                                    if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
-                                        debugPrint("Image still set but not displayed, assuming failure")
-                                        imageLabel.Image = ""
-                                        imageLabel.Visible = false
-                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                        warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
-                                    end
-                                    return
-                                end
-
-                                local loaded = pcall(function()
-                                    return ContentProvider:PreloadAsync({thumbId})
-                                end)
-                                if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
-                                    debugPrint("Image confirmed displayed")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(BACKGROUND_FILE, thumbId)
-                                end
-                            end)
+                            saveData(BACKGROUND_FILE, thumbId)
+                            showNotification("Image loaded")
                         else
-                            warn("Failed to preload image after", retries, "attempts, trying direct load")
-                            imageLabel.Image = thumbId
-                            videoFrame.Visible = false
-                            imageLabel.Visible = true
-                            imageLabel.ZIndex = 5
-                            imageLabel.ImageTransparency = 0
-                            mainFrame.BackgroundTransparency = 1
-
-                            local timeout = 20
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
-                                        debugPrint("Image failed to load (transparency still 1)")
-                                        imageLabel.Image = ""
-                                        imageLabel.Visible = false
-                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                        warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
-                                    end
-                                    return
-                                end
-
-                                local loaded = pcall(function()
-                                    return ContentProvider:PreloadAsync({thumbId})
-                                end)
-                                if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
-                                    debugPrint("Image confirmed displayed")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(BACKGROUND_FILE, thumbId)
-                                end
-                            end)
+                            warn("Failed to preload image after", retries, "attempts")
+                            imageLabel.Image = ""
+                            imageLabel.Visible = false
+                            mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                            showNotification("Failed to load image")
                         end
                     else
                         warn("Invalid Image ID format. Use a number only (e.g., 5191098772)")
@@ -1186,6 +1157,7 @@ function Gghiza07UI:CreateWindow(config)
                         imageLabel.Visible = false
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                        showNotification("Invalid Image ID format")
                     end
                 end
             })
@@ -1208,33 +1180,8 @@ function Gghiza07UI:CreateWindow(config)
                         end)
                         if success then
                             debugPrint("Video loaded successfully")
-                            local timeout = 15
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    debugPrint("Video load timeout")
-                                    if videoFrame.Video == value and not videoFrame.IsPlaying then
-                                        debugPrint("Video still set but not playing, assuming failure")
-                                        videoFrame.Video = ""
-                                        videoFrame.Visible = false
-                                        imageLabel.Visible = true
-                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                        warn("Video failed to load after timeout. Check if the Video ID is valid or accessible.")
-                                    end
-                                    return
-                                end
-
-                                if videoFrame.Video == value and videoFrame.IsPlaying then
-                                    debugPrint("Video confirmed playing")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(VIDEO_FILE, value)
-                                end
-                            end)
+                            saveData(VIDEO_FILE, value)
+                            showNotification("Video loaded")
                         else
                             warn("Failed to load video:", err)
                             videoFrame.Video = ""
@@ -1242,14 +1189,16 @@ function Gghiza07UI:CreateWindow(config)
                             imageLabel.Visible = true
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                            showNotification("Failed to load video")
                         end
                     else
-                        warn("Invalid Video ID format. Use rbxassetid:// followed by numbers or just the numbers (e.g., rbxassetid://1234567890 or 1234567890)")
+                        warn("Invalid Video ID format. Use rbxassetid:// followed by numbers or just the numbers")
                         videoFrame.Video = ""
                         videoFrame.Visible = false
                         imageLabel.Visible = true
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                        showNotification("Invalid Video ID format")
                     end
                 end
             })
@@ -1278,7 +1227,46 @@ function Gghiza07UI:CreateWindow(config)
                         Transparency = theme.Transparency
                     }
                     saveData(THEME_FILE, themeToSave)
-                    debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                    showNotification("Transparency set to " .. string.format("%.2f", value))
+                end
+            })
+
+            bgTab:AddInput({
+                Name = "Sound ID (Number only)",
+                Default = savedSound.SoundId or "",
+                Callback = function(value)
+                    if value == "" then
+                        buttonClickSound.SoundId = ""
+                        saveData(SOUND_FILE, {SoundId = ""})
+                        showNotification("Sound disabled")
+                        debugPrint("Sound disabled")
+                        return
+                    end
+
+                    if value:match("^%d+$") then
+                        local soundId = "rbxassetid://" .. value
+                        debugPrint("Attempting to load sound:", soundId)
+
+                        local success, err = pcall(function()
+                            ContentProvider:PreloadAsync({soundId})
+                            buttonClickSound.SoundId = soundId
+                            buttonClickSound:Play()
+                        end)
+
+                        if success then
+                            debugPrint("Sound loaded successfully")
+                            showNotification("Sound updated to ID: " .. value)
+                            saveData(SOUND_FILE, {SoundId = value})
+                        else
+                            warn("Failed to load sound:", err)
+                            showNotification("Failed to load Sound ID: " .. value)
+                            buttonClickSound.SoundId = ""
+                            saveData(SOUND_FILE, {SoundId = ""})
+                        end
+                    else
+                        warn("Invalid Sound ID format. Use a number only (e.g., 9120386436)")
+                        showNotification("Invalid Sound ID format")
+                    end
                 end
             })
 
@@ -1289,12 +1277,15 @@ function Gghiza07UI:CreateWindow(config)
                         if videoFrame.IsPlaying then
                             videoFrame:Pause()
                             debugPrint("Video paused")
+                            showNotification("Video paused")
                         else
                             videoFrame:Play()
                             debugPrint("Video playing")
+                            showNotification("Video playing")
                         end
                     else
                         debugPrint("No video loaded")
+                        showNotification("No video loaded")
                     end
                 end
             })
@@ -1317,11 +1308,15 @@ function Gghiza07UI:CreateWindow(config)
                         videoFrame.Visible = false
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
-                        elementStates.MultiDropdowns = {}
+                        elementStates.Dropdowns = {}
+                        buttonClickSound.SoundId = ""
                         saveData(ELEMENTS_FILE, elementStates)
+                        saveData(SOUND_FILE, {SoundId = ""})
                         debugPrint("Settings reset successfully")
+                        showNotification("Settings reset")
                     else
                         warn("Failed to reset settings:", err)
+                        showNotification("Failed to reset settings")
                     end
                 end
             })
@@ -1337,8 +1332,10 @@ function Gghiza07UI:CreateWindow(config)
                             end)
                             if success then
                                 debugPrint("Discord invite copied:", config.Discord.Invite)
+                                showNotification("Discord invite copied")
                             else
                                 warn("Failed to copy Discord invite:", err)
+                                showNotification("Failed to copy Discord invite")
                             end
                         end
                     end
@@ -1387,61 +1384,12 @@ function Gghiza07UI:CreateWindow(config)
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
-
-                local timeout = 15
-                local elapsed = 0
-                local connection
-                connection = RunService.Heartbeat:Connect(function(deltaTime)
-                    elapsed = elapsed + deltaTime
-                    if elapsed >= timeout then
-                        connection:Disconnect()
-                        debugPrint("Saved image load timeout")
-                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
-                            debugPrint("Saved image still set but not displayed, assuming failure")
-                            imageLabel.Image = ""
-                            imageLabel.Visible = false
-                            mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        end
-                        return
-                    end
-
-                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
-                        debugPrint("Saved image confirmed displayed")
-                        connection:Disconnect()
-                        mainFrame.BackgroundTransparency = 1
-                    end
-                end)
             else
-                debugPrint("Failed to preload saved image after retries, trying direct load")
-                imageLabel.Image = bgImage
-                imageLabel.Visible = true
-                imageLabel.ZIndex = 5
-                mainFrame.BackgroundTransparency = 1
-                videoFrame.Visible = false
-
-                local timeout = 15
-                local elapsed = 0
-                local connection
-                connection = RunService.Heartbeat:Connect(function(deltaTime)
-                    elapsed = elapsed + deltaTime
-                    if elapsed >= timeout then
-                        connection:Disconnect()
-                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
-                            debugPrint("Saved image failed to load (transparency still 1)")
-                            imageLabel.Image = ""
-                            imageLabel.Visible = false
-                            mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        end
-                        return
-                    end
-                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
-                        debugPrint("Saved image confirmed displayed")
-                        connection:Disconnect()
-                        mainFrame.BackgroundTransparency = 1
-                    end
-                end)
+                debugPrint("Failed to preload saved image after retries")
+                imageLabel.Image = ""
+                imageLabel.Visible = false
+                mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             end
         end
 
@@ -1457,31 +1405,7 @@ function Gghiza07UI:CreateWindow(config)
                 videoFrame:Play()
             end)
             if success then
-                local timeout = 15
-                local elapsed = 0
-                local connection
-                connection = RunService.Heartbeat:Connect(function(deltaTime)
-                    elapsed = elapsed + deltaTime
-                    if elapsed >= timeout then
-                        connection:Disconnect()
-                        debugPrint("Saved video load timeout")
-                        if videoFrame.Video == bgVideo and not videoFrame.IsPlaying then
-                            debugPrint("Saved video still set but not playing, assuming failure")
-                            videoFrame.Video = ""
-                            videoFrame.Visible = false
-                            imageLabel.Visible = true
-                            mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        end
-                        return
-                    end
-
-                    if videoFrame.Video == bgVideo and videoFrame.IsPlaying then
-                        debugPrint("Saved video confirmed playing")
-                        connection:Disconnect()
-                        mainFrame.BackgroundTransparency = 1
-                    end
-                end)
+                debugPrint("Video loaded successfully")
             else
                 debugPrint("Failed to load saved background video:", err)
                 videoFrame.Video = ""
