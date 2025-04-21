@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
 local VERSION = "V0.1"
 local LOCKED = false
@@ -50,8 +51,7 @@ function Gghiza07UI:CreateWindow(config)
 
     local elementStates = {
         Toggles = {},
-        Inputs = {},
-        MultiDropdowns = {}
+        Inputs = {}
     }
 
     local defaultTheme = {
@@ -121,10 +121,10 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, MultiDropdowns = {}})
+    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}})
     if not isfile(ELEMENTS_FILE) then
         debugPrint("No elements file found, resetting elementStates")
-        elementStates = {Toggles = {}, Inputs = {}, MultiDropdowns = {}}
+        elementStates = {Toggles = {}, Inputs = {}}
     end
 
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
@@ -185,6 +185,7 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.BackgroundTransparency = theme.Transparency
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
+    mainFrame.Visible = false -- เริ่มต้นซ่อน UI
     debugPrint("MainFrame created with Parent:", mainFrame.Parent)
 
     local corner = Instance.new("UICorner")
@@ -262,7 +263,7 @@ function Gghiza07UI:CreateWindow(config)
     tabButtons.Parent = mainFrame
 
     local tabContents = Instance.new("Frame")
-   Click here to go to the next page tabContents.Name = "TabContents"
+    tabContents.Name = "TabContents"
     tabContents.Size = UDim2.new(1, -20, 1, -110)
     tabContents.Position = UDim2.new(0, 10, 0, 110)
     tabContents.BackgroundTransparency = 1
@@ -287,15 +288,80 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
+    -- เพิ่มเสียงพูดเมื่อกดปุ่ม
+    local buttonClickSound = Instance.new("Sound")
+    buttonClickSound.Name = "ButtonClickSound"
+    buttonClickSound.SoundId = "rbxassetid://9120386436" -- เสียงพูด "Hello" (สามารถเปลี่ยน ID ได้)
+    buttonClickSound.Parent = screenGui
+    buttonClickSound.Volume = 1
+
+    -- ฟังก์ชันแสดงการแจ้งเตือน
+    local function showNotification(message)
+        local notificationFrame = Instance.new("Frame")
+        notificationFrame.Size = UDim2.new(0, 200, 0, 50)
+        notificationFrame.Position = UDim2.new(1, -210, 0, 10)
+        notificationFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        notificationFrame.BackgroundTransparency = 0.2
+        notificationFrame.ZIndex = 1002
+        notificationFrame.Parent = screenGui
+
+        local cornerNotif = Instance.new("UICorner")
+        cornerNotif.CornerRadius = UDim.new(0, 5)
+        cornerNotif.Parent = notificationFrame
+
+        local notifLabel = Instance.new("TextLabel")
+        notifLabel.Size = UDim2.new(1, -10, 1, -10)
+        notifLabel.Position = UDim2.new(0, 5, 0, 5)
+        notifLabel.BackgroundTransparency = 1
+        notifLabel.Text = message
+        notifLabel.TextColor3 = theme.TextColor
+        notifLabel.TextScaled = true
+        notifLabel.ZIndex = 1003
+        notifLabel.Parent = notificationFrame
+
+        -- Animation สำหรับการแจ้งเตือน
+        local fadeIn = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {BackgroundTransparency = 0})
+        local fadeOut = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+
+        fadeIn:Play()
+        fadeIn.Completed:Wait()
+        wait(2) -- แสดงผล 2 วินาที
+        fadeOut:Play()
+        fadeOut.Completed:Connect(function()
+            notificationFrame:Destroy()
+        end)
+    end
+
+    -- ปรับแต่งการเปิด/ปิด UI ให้สมูท
     local function toggleUI(state)
-        if state ~= nil then
-            mainFrame.Visible = state
-        else
-            mainFrame.Visible = not mainFrame.Visible
+        local isVisible = mainFrame.Visible
+        local targetState = state ~= nil and state or not isVisible
+
+        if targetState == isVisible then
+            return
         end
-        
-        toggleButton.Text = mainFrame.Visible and "ON" or "OFF"
-        toggleButton.BackgroundColor3 = mainFrame.Visible and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+
+        if targetState then
+            mainFrame.Visible = true
+            mainFrame.Position = UDim2.new(0.1, 0, -0.8, 0) -- เริ่มจากด้านบนนอกหน้าจอ
+            local slideIn = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.1, 0, 0.1, 0)})
+            slideIn:Play()
+            toggleButton.Text = "ON"
+            toggleButton.BackgroundColor3 = theme.AccentColor
+        else
+            local slideOut = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.1, 0, -0.8, 0)})
+            slideOut:Play()
+            slideOut.Completed:Connect(function()
+                mainFrame.Visible = false
+            end)
+            toggleButton.Text = "OFF"
+            toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        end
+
+        -- เล่นเสียงเมื่อกดปุ่ม
+        buttonClickSound:Play()
+        -- แสดงการแจ้งเตือน
+        showNotification("UI " .. (targetState and "Opened" or "Closed"))
     end
 
     toggleButton.MouseButton1Click:Connect(toggleUI)
@@ -387,6 +453,10 @@ function Gghiza07UI:CreateWindow(config)
                 end
             end
             tabButton.BackgroundColor3 = theme.AccentColor
+
+            -- เล่นเสียงและแจ้งเตือนเมื่อเปลี่ยนแท็บ
+            buttonClickSound:Play()
+            showNotification("Switched to " .. tabName)
         end
 
         tabButton.MouseButton1Click:Connect(selectTab)
@@ -416,6 +486,10 @@ function Gghiza07UI:CreateWindow(config)
             cornerButton.Parent = button
 
             button.MouseButton1Click:Connect(function()
+                -- เล่นเสียงและแจ้งเตือนเมื่อกดปุ่ม
+                buttonClickSound:Play()
+                showNotification("Clicked " .. (buttonConfig.Name or "Button"))
+
                 if buttonConfig.Callback then
                     local success, err = pcall(buttonConfig.Callback)
                     if not success then
@@ -483,6 +557,11 @@ function Gghiza07UI:CreateWindow(config)
                 toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
+                
+                -- เล่นเสียงและแจ้งเตือนเมื่อสลับ Toggle
+                buttonClickSound:Play()
+                showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
+
                 if toggleConfig.Callback then
                     local success, err = pcall(function()
                         toggleConfig.Callback(toggleState)
@@ -576,6 +655,11 @@ function Gghiza07UI:CreateWindow(config)
                         value = min + (max - min) * newValue
                         sliderFill.Size = UDim2.new(newValue, 0, 1, 0)
                         valueLabel.Text = string.format("%.2f", value)
+
+                        -- เล่นเสียงและแจ้งเตือนเมื่อปรับ Slider
+                        buttonClickSound:Play()
+                        showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
+
                         if sliderConfig.Callback then
                             local success, err = pcall(function()
                                 sliderConfig.Callback(value)
@@ -655,6 +739,11 @@ function Gghiza07UI:CreateWindow(config)
                 optionButton.MouseButton1Click:Connect(function()
                     dropdownButton.Text = tostring(option)
                     dropdownList.Visible = false
+
+                    -- เล่นเสียงและแจ้งเตือนเมื่อเลือกตัวเลือกใน Dropdown
+                    buttonClickSound:Play()
+                    showNotification("Selected " .. tostring(option))
+
                     if dropdownConfig.Callback then
                         local success, err = pcall(function()
                             dropdownConfig.Callback(option)
@@ -670,128 +759,8 @@ function Gghiza07UI:CreateWindow(config)
 
             dropdownButton.MouseButton1Click:Connect(function()
                 dropdownList.Visible = not dropdownList.Visible
-            end)
-
-            updateCanvasSize()
-            return dropdownFrame
-        end
-
-        function tab:AddMultiDropdown(multiDropdownConfig)
-            if not multiDropdownConfig or type(multiDropdownConfig) ~= "table" or not multiDropdownConfig.Options then
-                warn("Invalid multi-dropdown config. Expected a table with Options.")
-                return
-            end
-
-            local dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Name = multiDropdownConfig.Name or "MultiDropdown"
-            dropdownFrame.Size = UDim2.new(1, -20, 0, 40)
-            dropdownFrame.BackgroundTransparency = 1
-            dropdownFrame.LayoutOrder = #tabContent:GetChildren()
-            dropdownFrame.ZIndex = 11
-            dropdownFrame.Active = true
-            dropdownFrame.Parent = tabContent
-
-            local dropdownButton = Instance.new("TextButton")
-            dropdownButton.Size = UDim2.new(1, 0, 1, 0)
-            dropdownButton.BackgroundColor3 = theme.AccentColor
-            dropdownButton.Text = multiDropdownConfig.Name or "Select Options"
-            dropdownButton.TextColor3 = theme.TextColor
-            dropdownButton.TextScaled = true
-            dropdownButton.ZIndex = 11
-            dropdownButton.Active = true
-            dropdownButton.AutoButtonColor = true
-            dropdownButton.Parent = dropdownFrame
-
-            local cornerDropdown = Instance.new("UICorner")
-            cornerDropdown.CornerRadius = UDim.new(0, 5)
-            cornerDropdown.Parent = dropdownButton
-
-            local dropdownList = Instance.new("Frame")
-            dropdownList.Size = UDim2.new(1, 0, 0, 0)
-            dropdownList.Position = UDim2.new(0, 0, 1, 0)
-            dropdownList.BackgroundColor3 = theme.BackgroundColor
-            dropdownList.Visible = false
-            dropdownList.ZIndex = 12
-            dropdownList.Active = true
-            dropdownList.Parent = dropdownFrame
-
-            local listLayout = Instance.new("UIListLayout")
-            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            listLayout.Parent = dropdownList
-
-            local selectedOptions = {}
-            if elementStates.MultiDropdowns[multiDropdownConfig.Name] then
-                selectedOptions = elementStates.MultiDropdowns[multiDropdownConfig.Name]
-                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
-            end
-
-            local function updateListHeight()
-                dropdownList.Size = UDim2.new(1, 0, 0, #multiDropdownConfig.Options * 30)
-            end
-
-            local function updateButtonText()
-                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
-                elementStates.MultiDropdowns[multiDropdownConfig.Name] = selectedOptions
-                saveData(ELEMENTS_FILE, elementStates)
-            end
-
-            for i, option in ipairs(multiDropdownConfig.Options) do
-                local optionFrame = Instance.new("Frame")
-                optionFrame.Size = UDim2.new(1, 0, 0, 30)
-                optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                optionFrame.ZIndex = 13
-                optionFrame.LayoutOrder = i
-                optionFrame.Parent = dropdownList
-
-                local checkbox = Instance.new("TextButton")
-                checkbox.Size = UDim2.new(0.1, 0, 0.6, 0)
-                checkbox.Position = UDim2.new(0.05, 0, 0.2, 0)
-                checkbox.BackgroundColor3 = table.find(selectedOptions, option) and theme.AccentColor or Color3.fromRGB(100, 100, 100)
-                checkbox.Text = table.find(selectedOptions, option) and "✓" or ""
-                checkbox.TextColor3 = theme.TextColor
-                checkbox.TextScaled = true
-                checkbox.ZIndex = 14
-                checkbox.Active = true
-                checkbox.AutoButtonColor = true
-                checkbox.Parent = optionFrame
-
-                local optionLabel = Instance.new("TextLabel")
-                optionLabel.Size = UDim2.new(0.8, 0, 1, 0)
-                optionLabel.Position = UDim2.new(0.15, 0, 0, 0)
-                optionLabel.BackgroundTransparency = 1
-                optionLabel.Text = tostring(option)
-                optionLabel.TextColor3 = theme.TextColor
-                optionLabel.TextScaled = true
-                optionLabel.TextXAlignment = Enum.TextXAlignment.Left
-                optionLabel.ZIndex = 14
-                optionLabel.Parent = optionFrame
-
-                checkbox.MouseButton1Click:Connect(function()
-                    if table.find(selectedOptions, option) then
-                        table.remove(selectedOptions, table.find(selectedOptions, option))
-                        checkbox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-                        checkbox.Text = ""
-                    else
-                        table.insert(selectedOptions, option)
-                        checkbox.BackgroundColor3 = theme.AccentColor
-                        checkbox.Text = "✓"
-                    end
-                    updateButtonText()
-                    if multiDropdownConfig.Callback then
-                        local success, err = pcall(function()
-                            multiDropdownConfig.Callback(selectedOptions)
-                        end)
-                        if not success then
-                            debugPrint("MultiDropdown callback error:", err)
-                        end
-                    end
-                end)
-            end
-
-            updateListHeight()
-
-            dropdownButton.MouseButton1Click:Connect(function()
-                dropdownList.Visible = not dropdownList.Visible
+                buttonClickSound:Play()
+                showNotification("Dropdown " .. (dropdownList.Visible and "Opened" or "Closed"))
             end)
 
             updateCanvasSize()
@@ -847,6 +816,11 @@ function Gghiza07UI:CreateWindow(config)
                 if enterPressed then
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
+
+                    -- เล่นเสียงและแจ้งเตือนเมื่อป้อนข้อมูล
+                    buttonClickSound:Play()
+                    showNotification("Input updated: " .. textBox.Text)
+
                     if inputConfig.Callback then
                         local success, err = pcall(function()
                             inputConfig.Callback(textBox.Text)
@@ -1125,7 +1099,6 @@ function Gghiza07UI:CreateWindow(config)
                         videoFrame.Visible = false
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
-                        elementStates.MultiDropdowns = {}
                         saveData(ELEMENTS_FILE, elementStates)
                         debugPrint("Settings reset successfully")
                     else
