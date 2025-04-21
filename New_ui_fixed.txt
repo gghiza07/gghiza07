@@ -48,6 +48,7 @@ function Gghiza07UI:CreateWindow(config)
     local VIDEO_FILE = SETTINGS_FOLDER .. "/video.txt"
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
+    local SOUND_FILE = SETTINGS_FOLDER .. "/sound.json" -- ไฟล์สำหรับบันทึก Sound ID
 
     local elementStates = {
         Toggles = {},
@@ -185,7 +186,7 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.BackgroundTransparency = theme.Transparency
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
-    mainFrame.Visible = false -- เริ่มต้นซ่อน UI
+    mainFrame.Visible = false
     debugPrint("MainFrame created with Parent:", mainFrame.Parent)
 
     local corner = Instance.new("UICorner")
@@ -288,12 +289,19 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
-    -- เพิ่มเสียงพูดเมื่อกดปุ่ม
+    -- ตั้งค่า Sound object
     local buttonClickSound = Instance.new("Sound")
     buttonClickSound.Name = "ButtonClickSound"
-    buttonClickSound.SoundId = "rbxassetid://9120386436" -- เสียงพูด "Hello" (สามารถเปลี่ยน ID ได้)
+    buttonClickSound.SoundId = "rbxassetid://9120386436" -- ค่าเริ่มต้น
     buttonClickSound.Parent = screenGui
     buttonClickSound.Volume = 1
+
+    -- โหลด Sound ID ที่บันทึกไว้ (ถ้ามี)
+    local savedSound = loadData(SOUND_FILE, {SoundId = "9120386436"})
+    if savedSound and savedSound.SoundId then
+        buttonClickSound.SoundId = "rbxassetid://" .. savedSound.SoundId
+        debugPrint("Loaded saved Sound ID:", buttonClickSound.SoundId)
+    end
 
     -- ฟังก์ชันแสดงการแจ้งเตือน
     local function showNotification(message)
@@ -319,20 +327,18 @@ function Gghiza07UI:CreateWindow(config)
         notifLabel.ZIndex = 1003
         notifLabel.Parent = notificationFrame
 
-        -- Animation สำหรับการแจ้งเตือน
         local fadeIn = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {BackgroundTransparency = 0})
         local fadeOut = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
 
         fadeIn:Play()
         fadeIn.Completed:Wait()
-        wait(2) -- แสดงผล 2 วินาที
+        wait(2)
         fadeOut:Play()
         fadeOut.Completed:Connect(function()
             notificationFrame:Destroy()
         end)
     end
 
-    -- ปรับแต่งการเปิด/ปิด UI ให้สมูท
     local function toggleUI(state)
         local isVisible = mainFrame.Visible
         local targetState = state ~= nil and state or not isVisible
@@ -343,7 +349,7 @@ function Gghiza07UI:CreateWindow(config)
 
         if targetState then
             mainFrame.Visible = true
-            mainFrame.Position = UDim2.new(0.1, 0, -0.8, 0) -- เริ่มจากด้านบนนอกหน้าจอ
+            mainFrame.Position = UDim2.new(0.1, 0, -0.8, 0)
             local slideIn = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.1, 0, 0.1, 0)})
             slideIn:Play()
             toggleButton.Text = "ON"
@@ -358,9 +364,7 @@ function Gghiza07UI:CreateWindow(config)
             toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         end
 
-        -- เล่นเสียงเมื่อกดปุ่ม
         buttonClickSound:Play()
-        -- แสดงการแจ้งเตือน
         showNotification("UI " .. (targetState and "Opened" or "Closed"))
     end
 
@@ -454,7 +458,6 @@ function Gghiza07UI:CreateWindow(config)
             end
             tabButton.BackgroundColor3 = theme.AccentColor
 
-            -- เล่นเสียงและแจ้งเตือนเมื่อเปลี่ยนแท็บ
             buttonClickSound:Play()
             showNotification("Switched to " .. tabName)
         end
@@ -486,7 +489,6 @@ function Gghiza07UI:CreateWindow(config)
             cornerButton.Parent = button
 
             button.MouseButton1Click:Connect(function()
-                -- เล่นเสียงและแจ้งเตือนเมื่อกดปุ่ม
                 buttonClickSound:Play()
                 showNotification("Clicked " .. (buttonConfig.Name or "Button"))
 
@@ -558,7 +560,6 @@ function Gghiza07UI:CreateWindow(config)
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
                 
-                -- เล่นเสียงและแจ้งเตือนเมื่อสลับ Toggle
                 buttonClickSound:Play()
                 showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
 
@@ -656,7 +657,6 @@ function Gghiza07UI:CreateWindow(config)
                         sliderFill.Size = UDim2.new(newValue, 0, 1, 0)
                         valueLabel.Text = string.format("%.2f", value)
 
-                        -- เล่นเสียงและแจ้งเตือนเมื่อปรับ Slider
                         buttonClickSound:Play()
                         showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
 
@@ -740,7 +740,6 @@ function Gghiza07UI:CreateWindow(config)
                     dropdownButton.Text = tostring(option)
                     dropdownList.Visible = false
 
-                    -- เล่นเสียงและแจ้งเตือนเมื่อเลือกตัวเลือกใน Dropdown
                     buttonClickSound:Play()
                     showNotification("Selected " .. tostring(option))
 
@@ -817,7 +816,6 @@ function Gghiza07UI:CreateWindow(config)
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
 
-                    -- เล่นเสียงและแจ้งเตือนเมื่อป้อนข้อมูล
                     buttonClickSound:Play()
                     showNotification("Input updated: " .. textBox.Text)
 
@@ -1064,6 +1062,40 @@ function Gghiza07UI:CreateWindow(config)
                 end
             })
 
+            -- เพิ่ม Input สำหรับเปลี่ยน Sound ID
+            bgTab:AddInput({
+                Name = "Sound ID (Number only)",
+                Default = savedSound.SoundId or "9120386436",
+                Callback = function(value)
+                    if value:match("^%d+$") then
+                        local soundId = "rbxassetid://" .. value
+                        debugPrint("Attempting to load sound:", soundId)
+
+                        local success, err = pcall(function()
+                            -- ลองโหลดเสียง
+                            ContentProvider:PreloadAsync({soundId})
+                            buttonClickSound.SoundId = soundId
+                            buttonClickSound:Play() -- ลองเล่นเพื่อยืนยัน
+                        end)
+
+                        if success then
+                            debugPrint("Sound loaded successfully")
+                            showNotification("Sound updated to ID: " .. value)
+                            -- บันทึก Sound ID
+                            saveData(SOUND_FILE, {SoundId = value})
+                        else
+                            warn("Failed to load sound:", err)
+                            showNotification("Failed to load Sound ID: " .. value)
+                            -- คืนค่า Sound ID เดิม
+                            buttonClickSound.SoundId = "rbxassetid://9120386436"
+                        end
+                    else
+                        warn("Invalid Sound ID format. Use a number only (e.g., 9120386436)")
+                        showNotification("Invalid Sound ID format")
+                    end
+                end
+            })
+
             bgTab:AddButton({
                 Name = "Pause/Play Video",
                 Callback = function()
@@ -1099,7 +1131,9 @@ function Gghiza07UI:CreateWindow(config)
                         videoFrame.Visible = false
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
+                        buttonClickSound.SoundId = "rbxassetid://9120386436" -- รีเซ็ต Sound ID
                         saveData(ELEMENTS_FILE, elementStates)
+                        saveData(SOUND_FILE, {SoundId = "9120386436"})
                         debugPrint("Settings reset successfully")
                     else
                         warn("Failed to reset settings:", err)
