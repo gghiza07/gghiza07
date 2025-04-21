@@ -48,7 +48,7 @@ function Gghiza07UI:CreateWindow(config)
     local VIDEO_FILE = SETTINGS_FOLDER .. "/video.txt"
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
-    local KEY_FILE = SETTINGS_FOLDER .. "/key.txt"
+    local KEY_FILE = SETTINGS_FOLDER .. "/" .. (config.Keyconfig and config.Keyconfig.FileName or "key") .. ".txt"
 
     local elementStates = {
         Toggles = {},
@@ -191,7 +191,7 @@ function Gghiza07UI:CreateWindow(config)
     keyFrame.BackgroundColor3 = theme.BackgroundColor
     keyFrame.BackgroundTransparency = theme.Transparency
     keyFrame.ZIndex = 1002
-    keyFrame.Visible = config.Keyconfig ~= nil
+    keyFrame.Visible = config.Keyconfig and config.Keyconfig.Keyopen
     keyFrame.Parent = screenGui
     keyFrame.ClipsDescendants = true
 
@@ -263,7 +263,7 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
     mainFrame.ClipsDescendants = true
-    mainFrame.Visible = not keyFrame.Visible
+    mainFrame.Visible = not (config.Keyconfig and config.Keyconfig.Keyopen)
     debugPrint("MainFrame created with Parent:", mainFrame.Parent)
 
     local corner = Instance.new("UICorner")
@@ -460,7 +460,7 @@ function Gghiza07UI:CreateWindow(config)
     end)
 
     local function verifyKey(inputKey)
-        if not config.Keyconfig then return true end
+        if not config.Keyconfig or not config.Keyconfig.Keyopen then return true end
         local storedKey = loadData(KEY_FILE, "")
         if storedKey == inputKey and inputKey == config.Keyconfig.Key then
             return true
@@ -473,7 +473,7 @@ function Gghiza07UI:CreateWindow(config)
         return false
     end
 
-    if config.Keyconfig then
+    if config.Keyconfig and config.Keyconfig.Keyopen then
         verifyButton.MouseButton1Click:Connect(function()
             if verifyKey(keyInput.Text) then
                 keyFrame.Visible = false
