@@ -5,7 +5,7 @@ local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
-local VERSION = "V4.11 Enhanced"
+local VERSION = "V4.12 Enhanced"
 local LOCKED = false
 local DEBUG_MODE = true
 
@@ -781,7 +781,7 @@ function Gghiza07UI:CreateWindow(config)
                             debugPrint("BackgroundImage Visible:", backgroundImage.Visible, "ZIndex:", backgroundImage.ZIndex)
                             debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
 
-                            local timeout = 5
+                            local timeout = 10 -- เพิ่ม timeout เป็น 10 วินาที
                             local elapsed = 0
                             local connection
                             connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -794,7 +794,9 @@ function Gghiza07UI:CreateWindow(config)
                                         backgroundImage.Image = ""
                                         backgroundImage.Visible = false
                                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                                         debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                                        debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                                     end
                                     return
                                 end
@@ -815,7 +817,7 @@ function Gghiza07UI:CreateWindow(config)
                             backgroundImage.ZIndex = 5
                             mainFrame.BackgroundTransparency = 1
 
-                            local timeout = 5
+                            local timeout = 10 -- เพิ่ม timeout เป็น 10 วินาที
                             local elapsed = 0
                             local connection
                             connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -827,7 +829,9 @@ function Gghiza07UI:CreateWindow(config)
                                         backgroundImage.Image = ""
                                         backgroundImage.Visible = false
                                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                                         debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                                        debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                                     end
                                     return
                                 end
@@ -844,7 +848,9 @@ function Gghiza07UI:CreateWindow(config)
                         backgroundImage.Image = ""
                         backgroundImage.Visible = false
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                         debugPrint("Invalid Image ID, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                        debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                     end
                 end
             })
@@ -864,7 +870,7 @@ function Gghiza07UI:CreateWindow(config)
                         end)
                         if success then
                             debugPrint("Video loaded successfully")
-                            local timeout = 5
+                            local timeout = 10 -- เพิ่ม timeout เป็น 10 วินาที
                             local elapsed = 0
                             local connection
                             connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -878,7 +884,9 @@ function Gghiza07UI:CreateWindow(config)
                                         videoFrame.Visible = false
                                         backgroundImage.Visible = true
                                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                                         debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                                        debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                                     end
                                     return
                                 end
@@ -896,7 +904,9 @@ function Gghiza07UI:CreateWindow(config)
                             videoFrame.Visible = false
                             backgroundImage.Visible = true
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                             debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                            debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                         end
                     else
                         warn("Invalid Video ID format")
@@ -904,7 +914,9 @@ function Gghiza07UI:CreateWindow(config)
                         videoFrame.Visible = false
                         backgroundImage.Visible = true
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                         debugPrint("Invalid Video ID, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                        debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                     end
                 end
             })
@@ -1016,7 +1028,7 @@ function Gghiza07UI:CreateWindow(config)
                 videoFrame.Visible = false
                 debugPrint("After loading - BackgroundImage Image:", backgroundImage.Image)
 
-                local timeout = 5
+                local timeout = 10 -- เพิ่ม timeout เป็น 10 วินาที
                 local elapsed = 0
                 local connection
                 connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -1029,7 +1041,9 @@ function Gghiza07UI:CreateWindow(config)
                             backgroundImage.Image = ""
                             backgroundImage.Visible = false
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                             debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                            debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                         end
                         return
                     end
@@ -1048,7 +1062,7 @@ function Gghiza07UI:CreateWindow(config)
                 mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
 
-                local timeout = 5
+                local timeout = 10 -- เพิ่ม timeout เป็น 10 วินาที
                 local elapsed = 0
                 local connection
                 connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -1060,7 +1074,9 @@ function Gghiza07UI:CreateWindow(config)
                             backgroundImage.Image = ""
                             backgroundImage.Visible = false
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                             debugPrint("Reset BackgroundImage, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                            debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                         end
                         return
                     end
@@ -1085,7 +1101,7 @@ function Gghiza07UI:CreateWindow(config)
                 videoFrame:Play()
             end)
             if success then
-                local timeout = 5
+                local timeout = 10 -- เพิ่ม timeout เป็น 10 วินาที
                 local elapsed = 0
                 local connection
                 connection = RunService.Heartbeat:Connect(function(deltaTime)
@@ -1099,7 +1115,9 @@ function Gghiza07UI:CreateWindow(config)
                             videoFrame.Visible = false
                             backgroundImage.Visible = true
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                             debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                            debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
                         end
                         return
                     end
@@ -1116,13 +1134,17 @@ function Gghiza07UI:CreateWindow(config)
                 videoFrame.Visible = false
                 backgroundImage.Visible = true
                 mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+                mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
                 debugPrint("Reset VideoFrame, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
             end
         end
 
         if not backgroundImage.Visible and not videoFrame.Visible then
             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8) -- จำกัด transparency
+            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- สีสำรอง
             debugPrint("No saved image or video, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+            debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
         end
     end
 
