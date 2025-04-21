@@ -719,7 +719,7 @@ function Gghiza07UI:CreateWindow(config)
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
                     if inputConfig.Callback then
-                        local success, err = pcall(toggleConfig.Callback, textBox.Text)
+                        local success, err = pcall(inputConfig.Callback, textBox.Text)
                         if not success then
                             debugPrint("Input callback error:", err)
                         end
