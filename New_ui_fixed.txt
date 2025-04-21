@@ -4,7 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
+local TextService = game:GetService("TextService")
 
 local VERSION = "V0.1"
 local LOCKED = false
@@ -48,11 +48,12 @@ function Gghiza07UI:CreateWindow(config)
     local VIDEO_FILE = SETTINGS_FOLDER .. "/video.txt"
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
-    local SOUND_FILE = SETTINGS_FOLDER .. "/sound.json"
+    local KEY_FILE = SETTINGS_FOLDER .. "/key.txt"
 
     local elementStates = {
         Toggles = {},
-        Inputs = {}
+        Inputs = {},
+        MultiDropdowns = {}
     }
 
     local defaultTheme = {
@@ -62,6 +63,8 @@ function Gghiza07UI:CreateWindow(config)
         CornerRadius = 10,
         Transparency = 0.2
     }
+
+    local saveSetting = config.SaveSetting ~= false -- Default to true if not specified
 
     local function color3ToTable(color)
         return {
@@ -79,6 +82,7 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local function ensureFolderExists()
+        if not saveSetting then return end
         local success, err = pcall(function()
             if not isfolder("Gghiza07UI") then
                 makefolder("Gghiza07UI")
@@ -93,6 +97,7 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local function saveData(file, data)
+        if not saveSetting then return end
         ensureFolderExists()
         local success, err = pcall(function()
             writefile(file, HttpService:JSONEncode(data))
@@ -105,6 +110,7 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local function loadData(file, default)
+        if not saveSetting then return default end
         ensureFolderExists()
         if isfile(file) then
             local success, data = pcall(function()
@@ -122,10 +128,10 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}})
+    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, MultiDropdowns = {}})
     if not isfile(ELEMENTS_FILE) then
         debugPrint("No elements file found, resetting elementStates")
-        elementStates = {Toggles = {}, Inputs = {}}
+        elementStates = {Toggles = {}, Inputs = {}, MultiDropdowns = {}}
     end
 
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
@@ -178,6 +184,76 @@ function Gghiza07UI:CreateWindow(config)
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     debugPrint("ScreenGui created with Name:", screenGui.Name, "Parent:", screenGui.Parent)
 
+    local keyFrame = Instance.new("Frame")
+    keyFrame.Name = "KeyFrame"
+    keyFrame.Size = UDim2.new(0.4, 0, 0.3, 0)
+    keyFrame.Position = UDim2.new(0.3, 0, 0.35, 0)
+    keyFrame.BackgroundColor3 = theme.BackgroundColor
+    keyFrame.BackgroundTransparency = theme.Transparency
+    keyFrame.ZIndex = 1002
+    keyFrame.Visible = config.Keyconfig ~= nil
+    keyFrame.Parent = screenGui
+    keyFrame.ClipsDescendants = true
+
+    local keyCorner = Instance.new("UICorner")
+    keyCorner.CornerRadius = UDim.new(0, theme.CornerRadius)
+    keyCorner.Parent = keyFrame
+
+    local keyTitle = Instance.new("TextLabel")
+    keyTitle.Size = UDim2.new(1, -20, 0, 30)
+    keyTitle.Position = UDim2.new(0, 10, 0, 10)
+    keyTitle.BackgroundTransparency = 1
+    keyTitle.Text = "Enter Key"
+    keyTitle.TextColor3 = theme.TextColor
+    keyTitle.TextScaled = true
+    keyTitle.TextXAlignment = Enum.TextXAlignment.Center
+    keyTitle.ZIndex = 1003
+    keyTitle.Parent = keyFrame
+
+    local keyInput = Instance.new("TextBox")
+    keyInput.Size = UDim2.new(0.8, 0, 0, 40)
+    keyInput.Position = UDim2.new(0.1, 0, 0, 50)
+    keyInput.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    keyInput.Text = ""
+    keyInput.PlaceholderText = "Type key here..."
+    keyInput.TextColor3 = theme.TextColor
+    keyInput.TextScaled = true
+    keyInput.TextEditable = true
+    keyInput.ZIndex = 1003
+    keyInput.Parent = keyFrame
+
+    local keyInputCorner = Instance.new("UICorner")
+    keyInputCorner.CornerRadius = UDim.new(0, 5)
+    keyInputCorner.Parent = keyInput
+
+    local verifyButton = Instance.new("TextButton")
+    verifyButton.Size = UDim2.new(0.4, 0, 0, 40)
+    verifyButton.Position = UDim2.new(0.1, 0, 0, 100)
+    verifyButton.BackgroundColor3 = theme.AccentColor
+    verifyButton.Text = "Verify"
+    verifyButton.TextColor3 = theme.TextColor
+    verifyButton.TextScaled = true
+    verifyButton.ZIndex = 1003
+    verifyButton.Parent = keyFrame
+
+    local verifyCorner = Instance.new("UICorner")
+    verifyCorner.CornerRadius = UDim.new(0, 5)
+    verifyCorner.Parent = verifyButton
+
+    local copyKeyLinkButton = Instance.new("TextButton")
+    copyKeyLinkButton.Size = UDim2.new(0.4, 0, 0, 40)
+    copyKeyLinkButton.Position = UDim2.new(0.5, 0, 0, 100)
+    copyKeyLinkButton.BackgroundColor3 = theme.AccentColor
+    copyKeyLinkButton.Text = "Copy Key Link"
+    copyKeyLinkButton.TextColor3 = theme.TextColor
+    copyKeyLinkButton.TextScaled = true
+    copyKeyLinkButton.ZIndex = 1003
+    copyKeyLinkButton.Parent = keyFrame
+
+    local copyKeyLinkCorner = Instance.new("UICorner")
+    copyKeyLinkCorner.CornerRadius = UDim.new(0, 5)
+    copyKeyLinkCorner.Parent = copyKeyLinkButton
+
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0.8, 0, 0.8, 0)
@@ -186,7 +262,8 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.BackgroundTransparency = theme.Transparency
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
-    mainFrame.Visible = false
+    mainFrame.ClipsDescendants = true
+    mainFrame.Visible = not keyFrame.Visible
     debugPrint("MainFrame created with Parent:", mainFrame.Parent)
 
     local corner = Instance.new("UICorner")
@@ -289,87 +366,70 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
-    -- ตั้งค่า Sound object โดยเริ่มต้นไม่มีเสียง
-    local buttonClickSound = Instance.new("Sound")
-    buttonClickSound.Name = "ButtonClickSound"
-    buttonClickSound.SoundId = "" -- เริ่มต้นเป็นค่าว่าง (ไม่มีเสียง)
-    buttonClickSound.Parent = screenGui
-    buttonClickSound.Volume = 1
-
-    -- โหลด Sound ID ที่บันทึกไว้ (ถ้ามี)
-    local savedSound = loadData(SOUND_FILE, {SoundId = ""})
-    if savedSound and savedSound.SoundId and savedSound.SoundId ~= "" then
-        buttonClickSound.SoundId = "rbxassetid://" .. savedSound.SoundId
-        debugPrint("Loaded saved Sound ID:", buttonClickSound.SoundId)
-    end
-
-    -- ฟังก์ชันแสดงการแจ้งเตือน
-    local function showNotification(message)
-        local notificationFrame = Instance.new("Frame")
-        notificationFrame.Size = UDim2.new(0, 200, 0, 50)
-        notificationFrame.Position = UDim2.new(1, -210, 0, 10)
-        notificationFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        notificationFrame.BackgroundTransparency = 0.2
-        notificationFrame.ZIndex = 1002
-        notificationFrame.Parent = screenGui
-
-        local cornerNotif = Instance.new("UICorner")
-        cornerNotif.CornerRadius = UDim.new(0, 5)
-        cornerNotif.Parent = notificationFrame
-
-        local notifLabel = Instance.new("TextLabel")
-        notifLabel.Size = UDim2.new(1, -10, 1, -10)
-        notifLabel.Position = UDim2.new(0, 5, 0, 5)
-        notifLabel.BackgroundTransparency = 1
-        notifLabel.Text = message
-        notifLabel.TextColor3 = theme.TextColor
-        notifLabel.TextScaled = true
-        notifLabel.ZIndex = 1003
-        notifLabel.Parent = notificationFrame
-
-        local fadeIn = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {BackgroundTransparency = 0})
-        local fadeOut = TweenService:Create(notificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
-
-        fadeIn:Play()
-        fadeIn.Completed:Wait()
-        wait(2)
-        fadeOut:Play()
-        fadeOut.Completed:Connect(function()
-            notificationFrame:Destroy()
-        end)
-    end
+    local isAnimating = false
 
     local function toggleUI(state)
-        local isVisible = mainFrame.Visible
-        local targetState = state ~= nil and state or not isVisible
+        if isAnimating then return end
+        isAnimating = true
 
-        if targetState == isVisible then
-            return
-        end
+        local tweenInfo = TweenInfo.new(
+            0.5,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.Out
+        )
 
-        if targetState then
+        if state ~= nil then
             mainFrame.Visible = true
-            mainFrame.Position = UDim2.new(0.1, 0, -0.8, 0)
-            local slideIn = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.1, 0, 0.1, 0)})
-            slideIn:Play()
-            toggleButton.Text = "ON"
-            toggleButton.BackgroundColor3 = theme.AccentColor
+            if state then
+                mainFrame.Size = UDim2.new(0, 0, 0, 0)
+                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+                local openTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0.8, 0, 0.8, 0),
+                    Position = UDim2.new(0.1, 0, 0.1, 0)
+                })
+                openTween:Play()
+                openTween.Completed:Connect(function()
+                    isAnimating = false
+                end)
+            else
+                local closeTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                })
+                closeTween:Play()
+                closeTween.Completed:Connect(function()
+                    mainFrame.Visible = false
+                    isAnimating = false
+                end)
+            end
         else
-            local slideOut = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.1, 0, -0.8, 0)})
-            slideOut:Play()
-            slideOut.Completed:Connect(function()
-                mainFrame.Visible = false
-            end)
-            toggleButton.Text = "OFF"
-            toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+            if mainFrame.Visible then
+                local closeTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                })
+                closeTween:Play()
+                closeTween.Completed:Connect(function()
+                    mainFrame.Visible = false
+                    isAnimating = false
+                end)
+            else
+                mainFrame.Visible = true
+                mainFrame.Size = UDim2.new(0, 0, 0, 0)
+                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+                local openTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0.8, 0, 0.8, 0),
+                    Position = UDim2.new(0.1, 0, 0.1, 0)
+                })
+                openTween:Play()
+                openTween.Completed:Connect(function()
+                    isAnimating = false
+                end)
+            end
         end
-
-        if buttonClickSound.SoundId ~= "" then
-            buttonClickSound:Play()
-        else
-            debugPrint("No sound set for toggleUI")
-        end
-        showNotification("UI " .. (targetState and "Opened" or "Closed"))
+        
+        toggleButton.Text = mainFrame.Visible and "ON" or "OFF"
+        toggleButton.BackgroundColor3 = mainFrame.Visible and theme.AccentColor or Color3.fromRGB(100, 100, 100)
     end
 
     toggleButton.MouseButton1Click:Connect(toggleUI)
@@ -398,6 +458,64 @@ function Gghiza07UI:CreateWindow(config)
             )
         end
     end)
+
+    local function verifyKey(inputKey)
+        if not config.Keyconfig then return true end
+        local storedKey = loadData(KEY_FILE, "")
+        if storedKey == inputKey and inputKey == config.Keyconfig.Key then
+            return true
+        end
+        if inputKey == config.Keyconfig.Key then
+            saveData(KEY_FILE, inputKey)
+            return true
+        end
+        warn("Invalid key entered")
+        return false
+    end
+
+    if config.Keyconfig then
+        verifyButton.MouseButton1Click:Connect(function()
+            if verifyKey(keyInput.Text) then
+                keyFrame.Visible = false
+                mainFrame.Visible = true
+                toggleButton.Visible = true
+                debugPrint("Key verified successfully")
+            else
+                keyInput.Text = ""
+                keyInput.PlaceholderText = "Invalid key, try again"
+            end
+        end)
+
+        copyKeyLinkButton.MouseButton1Click:Connect(function()
+            if config.Keyconfig.Linkcopiekey then
+                local success, err = pcall(function()
+                    setclipboard(config.Keyconfig.Linkcopiekey)
+                end)
+                if success then
+                    copyKeyLinkButton.Text = "Copied!"
+                    task.wait(1)
+                    copyKeyLinkButton.Text = "Copy Key Link"
+                else
+                    warn("Failed to copy key link:", err)
+                end
+            end
+        end)
+
+        local savedKey = loadData(KEY_FILE, "")
+        if verifyKey(savedKey) then
+            keyFrame.Visible = false
+            mainFrame.Visible = true
+            toggleButton.Visible = true
+        else
+            keyFrame.Visible = true
+            mainFrame.Visible = false
+            toggleButton.Visible = false
+        end
+    else
+        keyFrame.Visible = false
+        mainFrame.Visible = true
+        toggleButton.Visible = true
+    end
 
     function window:CreateTab(tabName)
         if not tabName or type(tabName) ~= "string" then
@@ -461,13 +579,6 @@ function Gghiza07UI:CreateWindow(config)
                 end
             end
             tabButton.BackgroundColor3 = theme.AccentColor
-
-            if buttonClickSound.SoundId ~= "" then
-                buttonClickSound:Play()
-            else
-                debugPrint("No sound set for selectTab")
-            end
-            showNotification("Switched to " .. tabName)
         end
 
         tabButton.MouseButton1Click:Connect(selectTab)
@@ -497,14 +608,6 @@ function Gghiza07UI:CreateWindow(config)
             cornerButton.Parent = button
 
             button.MouseButton1Click:Connect(function()
-                if buttonClickSound.SoundId ~= "" then
-                    buttonClickSound:Play()
-                else
-                    debugPrint("No sound set for button click")
-                    showNotification("No sound set")
-                end
-                showNotification("Clicked " .. (buttonConfig.Name or "Button"))
-
                 if buttonConfig.Callback then
                     local success, err = pcall(buttonConfig.Callback)
                     if not success then
@@ -572,14 +675,6 @@ function Gghiza07UI:CreateWindow(config)
                 toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
-                
-                if buttonClickSound.SoundId ~= "" then
-                    buttonClickSound:Play()
-                else
-                    debugPrint("No sound set for toggle")
-                end
-                showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
-
                 if toggleConfig.Callback then
                     local success, err = pcall(function()
                         toggleConfig.Callback(toggleState)
@@ -673,14 +768,6 @@ function Gghiza07UI:CreateWindow(config)
                         value = min + (max - min) * newValue
                         sliderFill.Size = UDim2.new(newValue, 0, 1, 0)
                         valueLabel.Text = string.format("%.2f", value)
-
-                        if buttonClickSound.SoundId ~= "" then
-                            buttonClickSound:Play()
-                        else
-                            debugPrint("No sound set for slider")
-                        end
-                        showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
-
                         if sliderConfig.Callback then
                             local success, err = pcall(function()
                                 sliderConfig.Callback(value)
@@ -760,14 +847,6 @@ function Gghiza07UI:CreateWindow(config)
                 optionButton.MouseButton1Click:Connect(function()
                     dropdownButton.Text = tostring(option)
                     dropdownList.Visible = false
-
-                    if buttonClick_SOUND_ID ~= "" then
-                        buttonClickSound:Play()
-                    else
-                        debugPrint("No sound set for dropdown")
-                    end
-                    showNotification("Selected " .. tostring(option))
-
                     if dropdownConfig.Callback then
                         local success, err = pcall(function()
                             dropdownConfig.Callback(option)
@@ -783,12 +862,128 @@ function Gghiza07UI:CreateWindow(config)
 
             dropdownButton.MouseButton1Click:Connect(function()
                 dropdownList.Visible = not dropdownList.Visible
-                if buttonClickSound.SoundId ~= "" then
-                    buttonClickSound:Play()
-                else
-                    debugPrint("No sound set for dropdown")
-                end
-                showNotification("Dropdown " .. (dropdownList.Visible and "Opened" or "Closed"))
+            end)
+
+            updateCanvasSize()
+            return dropdownFrame
+        end
+
+        function tab:AddMultiDropdown(multiDropdownConfig)
+            if not multiDropdownConfig or type(multiDropdownConfig) ~= "table" or not multiDropdownConfig.Options then
+                warn("Invalid multi-dropdown config. Expected a table with Options.")
+                return
+            end
+
+            local dropdownFrame = Instance.new("Frame")
+            dropdownFrame.Name = multiDropdownConfig.Name or "MultiDropdown"
+            dropdownFrame.Size = UDim2.new(1, -20, 0, 40)
+            dropdownFrame.BackgroundTransparency = 1
+            dropdownFrame.LayoutOrder = #tabContent:GetChildren()
+            dropdownFrame.ZIndex = 11
+            dropdownFrame.Active = true
+            dropdownFrame.Parent = tabContent
+
+            local dropdownButton = Instance.new("TextButton")
+            dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+            dropdownButton.BackgroundColor3 = theme.AccentColor
+            dropdownButton.Text = multiDropdownConfig.Name or "Select Options"
+            dropdownButton.TextColor3 = theme.TextColor
+            dropdownButton.TextScaled = true
+            dropdownButton.ZIndex = 11
+            dropdownButton.Active = true
+            dropdownButton.AutoButtonColor = true
+            dropdownButton.Parent = dropdownFrame
+
+            local cornerDropdown = Instance.new("UICorner")
+            cornerDropdown.CornerRadius = UDim.new(0, 5)
+            cornerDropdown.Parent = dropdownButton
+
+            local dropdownList = Instance.new("Frame")
+            dropdownList.Size = UDim2.new(1, 0, 0, 0)
+            dropdownList.Position = UDim2.new(0, 0, 1, 0)
+            dropdownList.BackgroundColor3 = theme.BackgroundColor
+            dropdownList.Visible = false
+            dropdownList.ZIndex = 12
+            dropdownList.Active = true
+            dropdownList.Parent = dropdownFrame
+
+            local listLayout = Instance.new("UIListLayout")
+            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            listLayout.Parent = dropdownList
+
+            local selectedOptions = {}
+            if elementStates.MultiDropdowns[multiDropdownConfig.Name] then
+                selectedOptions = elementStates.MultiDropdowns[multiDropdownConfig.Name]
+                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
+            end
+
+            local function updateListHeight()
+                dropdownList.Size = UDim2.new(1, 0, 0, #multiDropdownConfig.Options * 30)
+            end
+
+            local function updateButtonText()
+                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
+                elementStates.MultiDropdowns[multiDropdownConfig.Name] = selectedOptions
+                saveData(ELEMENTS_FILE, elementStates)
+            end
+
+            for i, option in ipairs(multiDropdownConfig.Options) do
+                local optionFrame = Instance.new("Frame")
+                optionFrame.Size = UDim2.new(1, 0, 0, 30)
+                optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                optionFrame.ZIndex = 13
+                optionFrame.LayoutOrder = i
+                optionFrame.Parent = dropdownList
+
+                local checkbox = Instance.new("TextButton")
+                checkbox.Size = UDim2.new(0.1, 0, 0.6, 0)
+                checkbox.Position = UDim2.new(0.05, 0, 0.2, 0)
+                checkbox.BackgroundColor3 = table.find(selectedOptions, option) and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+                checkbox.Text = table.find(selectedOptions, option) and "✓" or ""
+                checkbox.TextColor3 = theme.TextColor
+                checkbox.TextScaled = true
+                checkbox.ZIndex = 14
+                checkbox.Active = true
+                checkbox.AutoButtonColor = true
+                checkbox.Parent = optionFrame
+
+                local optionLabel = Instance.new("TextLabel")
+                optionLabel.Size = UDim2.new(0.8, 0, 1, 0)
+                optionLabel.Position = UDim2.new(0.15, 0, 0, 0)
+                optionLabel.BackgroundTransparency = 1
+                optionLabel.Text = tostring(option)
+                optionLabel.TextColor3 = theme.TextColor
+                optionLabel.TextScaled = true
+                optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+                optionLabel.ZIndex = 14
+                optionLabel.Parent = optionFrame
+
+                checkbox.MouseButton1Click:Connect(function()
+                    if table.find(selectedOptions, option) then
+                        table.remove(selectedOptions, table.find(selectedOptions, option))
+                        checkbox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+                        checkbox.Text = ""
+                    else
+                        table.insert(selectedOptions, option)
+                        checkbox.BackgroundColor3 = theme.AccentColor
+                        checkbox.Text = "✓"
+                    end
+                    updateButtonText()
+                    if multiDropdownConfig.Callback then
+                        local success, err = pcall(function()
+                            multiDropdownConfig.Callback(selectedOptions)
+                        end)
+                        if not success then
+                            debugPrint("MultiDropdown callback error:", err)
+                        end
+                    end
+                end)
+            end
+
+            updateListHeight()
+
+            dropdownButton.MouseButton1Click:Connect(function()
+                dropdownList.Visible = not dropdownList.Visible
             end)
 
             updateCanvasSize()
@@ -844,14 +1039,6 @@ function Gghiza07UI:CreateWindow(config)
                 if enterPressed then
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
-
-                    if buttonClickSound.SoundId ~= "" then
-                        buttonClickSound:Play()
-                    else
-                        debugPrint("No sound set for input")
-                    end
-                    showNotification("Input updated: " .. textBox.Text)
-
                     if inputConfig.Callback then
                         local success, err = pcall(function()
                             inputConfig.Callback(textBox.Text)
@@ -1095,47 +1282,6 @@ function Gghiza07UI:CreateWindow(config)
                 end
             })
 
-            -- เพิ่ม Input สำหรับเปลี่ยน Sound ID
-            bgTab:AddInput({
-                Name = "Sound ID (Number only)",
-                Default = savedSound.SoundId or "",
-                Callback = function(value)
-                    if value == "" then
-                        -- ถ้าป้อนค่าว่าง ให้ตั้งเป็นไม่มีเสียง
-                        buttonClickSound.SoundId = ""
-                        saveData(SOUND_FILE, {SoundId = ""})
-                        showNotification("Sound disabled")
-                        debugPrint("Sound disabled")
-                        return
-                    end
-
-                    if value:match("^%d+$") then
-                        local soundId = "rbxassetid://" .. value
-                        debugPrint("Attempting to load sound:", soundId)
-
-                        local success, err = pcall(function()
-                            ContentProvider:PreloadAsync({soundId})
-                            buttonClickSound.SoundId = soundId
-                            buttonClickSound:Play()
-                        end)
-
-                        if success then
-                            debugPrint("Sound loaded successfully")
-                            showNotification("Sound updated to ID: " .. value)
-                            saveData(SOUND_FILE, {SoundId = value})
-                        else
-                            warn("Failed to load sound:", err)
-                            showNotification("Failed to load Sound ID: " .. value)
-                            buttonClickSound.SoundId = ""
-                            saveData(SOUND_FILE, {SoundId = ""})
-                        end
-                    else
-                        warn("Invalid Sound ID format. Use a number only (e.g., 9120386436)")
-                        showNotification("Invalid Sound ID format")
-                    end
-                end
-            })
-
             bgTab:AddButton({
                 Name = "Pause/Play Video",
                 Callback = function()
@@ -1171,15 +1317,33 @@ function Gghiza07UI:CreateWindow(config)
                         videoFrame.Visible = false
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
-                        buttonClickSound.SoundId = "" -- รีเซ็ตเป็นไม่มีเสียง
+                        elementStates.MultiDropdowns = {}
                         saveData(ELEMENTS_FILE, elementStates)
-                        saveData(SOUND_FILE, {SoundId = ""})
                         debugPrint("Settings reset successfully")
                     else
                         warn("Failed to reset settings:", err)
                     end
                 end
             })
+
+            if config.Discord and config.Discord.Discord and config.Discord.Invite then
+                bgTab:AddToggle({
+                    Name = "Copy Discord Invite",
+                    Default = false,
+                    Callback = function(state)
+                        if state then
+                            local success, err = pcall(function()
+                                setclipboard(config.Discord.Invite)
+                            end)
+                            if success then
+                                debugPrint("Discord invite copied:", config.Discord.Invite)
+                            else
+                                warn("Failed to copy Discord invite:", err)
+                            end
+                        end
+                    end
+                })
+            end
 
             updateCanvasSize()
         end
