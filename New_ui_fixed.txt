@@ -129,9 +129,14 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, Dropdowns = {}})
-    if not isfile(ELEMENTS_FILE) then
-        debugPrint("No elements file found, resetting elementStates")
+    -- แก้ไข: ตรวจสอบและกำหนดค่า elementStates ให้ครบถ้วน
+    local loadedElementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, Dropdowns = {}})
+    if type(loadedElementStates) == "table" then
+        elementStates.Toggles = loadedElementStates.Toggles or {}
+        elementStates.Inputs = loadedElementStates.Inputs or {}
+        elementStates.Dropdowns = loadedElementStates.Dropdowns or {}
+    else
+        debugPrint("Loaded element states is not a table, resetting to default")
         elementStates = {Toggles = {}, Inputs = {}, Dropdowns = {}}
     end
 
@@ -710,7 +715,7 @@ function Gghiza07UI:CreateWindow(config)
             toggleLabel.Parent = toggleFrame
 
             local toggleState = toggleConfig.Default or false
-            if elementStates.Toggles[toggleConfig.Name] ~= nil then
+            if elementStates.Toggles and elementStates.Toggles[toggleConfig.Name] ~= nil then
                 toggleState = elementStates.Toggles[toggleConfig.Name]
                 debugPrint("Loaded toggle state for", toggleConfig.Name, ":", toggleState)
             else
@@ -737,6 +742,9 @@ function Gghiza07UI:CreateWindow(config)
                 toggleState = not toggleState
                 toggleButton.Text = toggleState and "ON" or "OFF"
                 toggleButton.BackgroundColor3 = toggleState and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+                if not elementStates.Toggles then
+                    elementStates.Toggles = {}
+                end
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
                 
@@ -906,7 +914,8 @@ function Gghiza07UI:CreateWindow(config)
             local isMulti = dropdownConfig.Multi or false
             local maxSelections = dropdownConfig.MaxSelections or math.huge
             local selectedOptions = {}
-            if elementStates.Dropdowns[dropdownConfig.Name] then
+            -- แก้ไข: ตรวจสอบ elementStates.Dropdowns ก่อนใช้งาน
+            if elementStates.Dropdowns and elementStates.Dropdowns[dropdownConfig.Name] then
                 selectedOptions = elementStates.Dropdowns[dropdownConfig.Name]
                 dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or (dropdownConfig.Name or "Select Option")
             elseif not isMulti and dropdownConfig.Default then
@@ -920,6 +929,9 @@ function Gghiza07UI:CreateWindow(config)
 
             local function updateButtonText()
                 dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or (dropdownConfig.Name or "Select Option")
+                if not elementStates.Dropdowns then
+                    elementStates.Dropdowns = {}
+                end
                 elementStates.Dropdowns[dropdownConfig.Name] = selectedOptions
                 saveData(ELEMENTS_FILE, elementStates)
             end
@@ -1051,7 +1063,7 @@ function Gghiza07UI:CreateWindow(config)
             inputLabel.Parent = inputFrame
 
             local defaultText = inputConfig.Default or ""
-            if elementStates.Inputs[inputConfig.Name] ~= nil then
+            if elementStates.Inputs and elementStates.Inputs[inputConfig.Name] ~= nil then
                 defaultText = elementStates.Inputs[inputConfig.Name]
             end
 
@@ -1072,6 +1084,9 @@ function Gghiza07UI:CreateWindow(config)
 
             textBox.FocusLost:Connect(function(enterPressed)
                 if enterPressed then
+                    if not elementStates.Inputs then
+                        elementStates.Inputs = {}
+                    end
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
 
@@ -1303,8 +1318,46 @@ function Gghiza07UI:CreateWindow(config)
                 end
             })
 
+            -- เพิ่มปุ่มรีเซ็ตเฉพาะส่วน
             bgTab:AddButton({
-                Name = "Reset Settings",
+                Name = "Reset Dropdowns",
+                Callback = function()
+                    local success, err = pcall(function()
+                        elementStates.Dropdowns = {}
+                        saveData(ELEMENTS_FILE, elementStates)
+                        debugPrint("Dropdown states reset")
+                        showNotification("Dropdown states reset")
+                    end)
+                    if not success then
+                        warn("Failed to reset dropdown states:", err)
+                        showNotification("Failed to reset dropdown states")
+                    end
+                end
+            })
+
+            bgTab:AddButton({
+                Name = "Reset Theme",
+                Callback = function()
+                    local success, err = pcall(function()
+                        if isfile(THEME_FILE) then
+                            delfile(THEME_FILE)
+                        end
+                        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                        theme.BackgroundColor = Color3.fromRGB(30, 30, 30)
+                        theme.Transparency = 0.2
+                        mainFrame.BackgroundTransparency = 0.2
+                        debugPrint("Theme reset")
+                        showNotification("Theme reset")
+                    end)
+                    if not success then
+                        warn("Failed to reset theme:", err)
+                        showNotification("Failed to reset theme")
+                    end
+                end
+            })
+
+            bgTab:AddButton({
+                Name = "Reset All Settings",
                 Callback = function()
                     local success, err = pcall(function()
                         if isfolder(SETTINGS_FOLDER) then
