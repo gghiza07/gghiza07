@@ -435,10 +435,6 @@ function Gghiza07UI:CreateWindow(config)
         end)
 
         updateNotificationPositions()
-
-        if buttonClickSound.SoundId ~= "" then
-            buttonClickSound:Play()
-        end
     end
 
     local function toggleUI(state)
@@ -468,8 +464,6 @@ function Gghiza07UI:CreateWindow(config)
 
         if buttonClickSound.SoundId ~= "" then
             buttonClickSound:Play()
-        else
-            debugPrint("No sound set for toggleUI")
         end
         showNotification("UI " .. (targetState and "Opened" or "Closed"))
     end
@@ -521,6 +515,11 @@ function Gghiza07UI:CreateWindow(config)
                 keyFrame.Visible = false
                 mainFrame.Visible = true
                 toggleButton.Visible = true
+                if toggleButton.Text == "ON" then
+                    mainFrame.Visible = true
+                else
+                    mainFrame.Visible = false
+                end
                 debugPrint("Key verified successfully")
                 if buttonClickSound.SoundId ~= "" then
                     buttonClickSound:Play()
@@ -909,7 +908,7 @@ function Gghiza07UI:CreateWindow(config)
             local selectedOptions = {}
             if elementStates.Dropdowns[dropdownConfig.Name] then
                 selectedOptions = elementStates.Dropdowns[dropdownConfig.Name]
-                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or dropdownConfig.Name
+                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or (dropdownConfig.Name or "Select Option")
             elseif not isMulti and dropdownConfig.Default then
                 selectedOptions = {dropdownConfig.Default}
                 dropdownButton.Text = dropdownConfig.Default
@@ -920,10 +919,12 @@ function Gghiza07UI:CreateWindow(config)
             end
 
             local function updateButtonText()
-                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or dropdownConfig.Name
+                dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or (dropdownConfig.Name or "Select Option")
                 elementStates.Dropdowns[dropdownConfig.Name] = selectedOptions
                 saveData(ELEMENTS_FILE, elementStates)
             end
+
+            local optionButtons = {} -- เพื่อเก็บปุ่มตัวเลือกทั้งหมดสำหรับ Single Dropdown
 
             for i, option in ipairs(dropdownConfig.Options) do
                 local optionFrame = Instance.new("Frame")
@@ -959,6 +960,8 @@ function Gghiza07UI:CreateWindow(config)
                 optionLabel.AutoButtonColor = true
                 optionLabel.Parent = optionFrame
 
+                table.insert(optionButtons, {Label = optionLabel, Checkbox = checkbox})
+
                 local function handleSelection()
                     if isMulti then
                         if table.find(selectedOptions, option) then
@@ -975,15 +978,26 @@ function Gghiza07UI:CreateWindow(config)
                                 return
                             end
                         end
+                        updateButtonText()
+                        if buttonClickSound.SoundId ~= "" then
+                            buttonClickSound:Play()
+                        end
+                        showNotification("Selected " .. tostring(option))
                     else
+                        -- Single Dropdown: รีเซ็ตตัวเลือกอื่น ๆ และเลือกตัวใหม่
+                        for _, btn in ipairs(optionButtons) do
+                            btn.Label.TextColor3 = theme.TextColor
+                        end
                         selectedOptions = {option}
+                        optionLabel.TextColor3 = theme.AccentColor
                         dropdownList.Visible = false
+                        updateButtonText()
+                        if buttonClickSound.SoundId ~= "" then
+                            buttonClickSound:Play()
+                        end
+                        showNotification("Selected " .. tostring(option))
                     end
-                    updateButtonText()
-                    if buttonClickSound.SoundId ~= "" then
-                        buttonClickSound:Play()
-                    end
-                    showNotification("Selected " .. (isMulti and tostring(option) or table.concat(selectedOptions, ", ")))
+
                     if dropdownConfig.Callback then
                         local success, err = pcall(function()
                             dropdownConfig.Callback(isMulti and selectedOptions or selectedOptions[1])
@@ -1005,7 +1019,6 @@ function Gghiza07UI:CreateWindow(config)
                 if buttonClickSound.SoundId ~= "" then
                     buttonClickSound:Play()
                 end
-                showNotification("Dropdown " .. (dropdownList.Visible and "Opened" or "Closed"))
             end)
 
             updateCanvasSize()
