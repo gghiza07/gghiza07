@@ -190,19 +190,19 @@ function Gghiza07UI:CreateWindow(config)
     corner.CornerRadius = UDim.new(0, theme.CornerRadius)
     corner.Parent = mainFrame
 
-    local backgroundImage = Instance.new("ImageLabel")
-    backgroundImage.Name = "BackgroundImage"
-    backgroundImage.Size = UDim2.new(1, 0, 1, 0)
-    backgroundImage.Position = UDim2.new(0, 0, 0, 0)
-    backgroundImage.BackgroundTransparency = 1
-    backgroundImage.ZIndex = 2
-    backgroundImage.ScaleType = Enum.ScaleType.Crop
-    backgroundImage.ImageTransparency = 0
-    backgroundImage.Parent = mainFrame
-    debugPrint("BackgroundImage created with Parent:", backgroundImage.Parent)
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "ImageLabel"
+    imageLabel.Size = UDim2.new(1, 0, 1, 0)
+    imageLabel.Position = UDim2.new(0, 0, 0, 0)
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.ZIndex = 2
+    imageLabel.ScaleType = Enum.ScaleType.Crop
+    imageLabel.ImageTransparency = 0
+    imageLabel.Parent = mainFrame
+    debugPrint("ImageLabel created with Parent:", imageLabel.Parent)
 
-    backgroundImage:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
-        debugPrint("BackgroundImage ImageTransparency changed to:", backgroundImage.ImageTransparency)
+    imageLabel:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+        debugPrint("ImageLabel ImageTransparency changed to:", imageLabel.ImageTransparency)
     end)
 
     local videoFrame = Instance.new("VideoFrame")
@@ -719,7 +719,7 @@ function Gghiza07UI:CreateWindow(config)
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
                     if inputConfig.Callback then
-                        local success, err = pcall(inputConfig.Callback, textBox.Text)
+                        local success, err = pcall(toggleConfig.Callback, textBox.Text)
                         if not success then
                             debugPrint("Input callback error:", err)
                         end
@@ -783,10 +783,10 @@ function Gghiza07UI:CreateWindow(config)
                         end
                         if success then
                             debugPrint("Image preloaded successfully after retries")
-                            backgroundImage.Image = value
+                            imageLabel.Image = value
                             videoFrame.Visible = false
-                            backgroundImage.Visible = true
-                            backgroundImage.ZIndex = 5
+                            imageLabel.Visible = true
+                            imageLabel.ZIndex = 5
                             mainFrame.BackgroundTransparency = 1
 
                             local timeout = 15
@@ -797,10 +797,10 @@ function Gghiza07UI:CreateWindow(config)
                                 if elapsed >= timeout then
                                     connection:Disconnect()
                                     debugPrint("Image load timeout")
-                                    if backgroundImage.Image == value and backgroundImage.ImageTransparency == 1 then
+                                    if imageLabel.Image == value and imageLabel.ImageTransparency == 1 then
                                         debugPrint("Image still set but not displayed, assuming failure")
-                                        backgroundImage.Image = ""
-                                        backgroundImage.Visible = false
+                                        imageLabel.Image = ""
+                                        imageLabel.Visible = false
                                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                                         warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
@@ -808,7 +808,7 @@ function Gghiza07UI:CreateWindow(config)
                                     return
                                 end
 
-                                if backgroundImage.Image == value and backgroundImage.ImageTransparency == 0 then
+                                if imageLabel.Image == value and imageLabel.ImageTransparency == 0 then
                                     debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
@@ -817,10 +817,10 @@ function Gghiza07UI:CreateWindow(config)
                             end)
                         else
                             warn("Failed to preload image after", retries, "attempts, trying direct load")
-                            backgroundImage.Image = value
+                            imageLabel.Image = value
                             videoFrame.Visible = false
-                            backgroundImage.Visible = true
-                            backgroundImage.ZIndex = 5
+                            imageLabel.Visible = true
+                            imageLabel.ZIndex = 5
                             mainFrame.BackgroundTransparency = 1
 
                             local timeout = 15
@@ -830,17 +830,17 @@ function Gghiza07UI:CreateWindow(config)
                                 elapsed = elapsed + deltaTime
                                 if elapsed >= timeout then
                                     connection:Disconnect()
-                                    if backgroundImage.Image == value and backgroundImage.ImageTransparency == 1 then
+                                    if imageLabel.Image == value and imageLabel.ImageTransparency == 1 then
                                         debugPrint("Image failed to load (transparency still 1)")
-                                        backgroundImage.Image = ""
-                                        backgroundImage.Visible = false
+                                        imageLabel.Image = ""
+                                        imageLabel.Visible = false
                                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                                         warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
                                     end
                                     return
                                 end
-                                if backgroundImage.Image == value and backgroundImage.ImageTransparency == 0 then
+                                if imageLabel.Image == value and imageLabel.ImageTransparency == 0 then
                                     debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
@@ -850,8 +850,8 @@ function Gghiza07UI:CreateWindow(config)
                         end
                     else
                         warn("Invalid Image ID format. Use rbxassetid:// followed by numbers or just the numbers (e.g., rbxassetid://1234567890 or 1234567890)")
-                        backgroundImage.Image = ""
-                        backgroundImage.Visible = false
+                        imageLabel.Image = ""
+                        imageLabel.Visible = false
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                     end
@@ -869,7 +869,7 @@ function Gghiza07UI:CreateWindow(config)
                         local success, err = pcall(function()
                             videoFrame.Video = value
                             videoFrame.Visible = true
-                            backgroundImage.Visible = false
+                            imageLabel.Visible = false
                             videoFrame.ZIndex = 5
                             mainFrame.BackgroundTransparency = 1
                             videoFrame:Play()
@@ -888,7 +888,7 @@ function Gghiza07UI:CreateWindow(config)
                                         debugPrint("Video still set but not playing, assuming failure")
                                         videoFrame.Video = ""
                                         videoFrame.Visible = false
-                                        backgroundImage.Visible = true
+                                        imageLabel.Visible = true
                                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                                         warn("Video failed to load after timeout. Check if the Video ID is valid or accessible.")
@@ -907,7 +907,7 @@ function Gghiza07UI:CreateWindow(config)
                             warn("Failed to load video:", err)
                             videoFrame.Video = ""
                             videoFrame.Visible = false
-                            backgroundImage.Visible = true
+                            imageLabel.Visible = true
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                         end
@@ -915,7 +915,7 @@ function Gghiza07UI:CreateWindow(config)
                         warn("Invalid Video ID format. Use rbxassetid:// followed by numbers or just the numbers (e.g., rbxassetid://1234567890 or 1234567890)")
                         videoFrame.Video = ""
                         videoFrame.Visible = false
-                        backgroundImage.Visible = true
+                        imageLabel.Visible = true
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                     end
@@ -930,7 +930,7 @@ function Gghiza07UI:CreateWindow(config)
                 Callback = function(value)
                     debugPrint("Setting Transparency to:", value)
                     theme.Transparency = value
-                    local isImageDisplayed = backgroundImage.Visible and backgroundImage.Image ~= "" and backgroundImage.ImageTransparency == 0
+                    local isImageDisplayed = imageLabel.Visible and imageLabel.Image ~= "" and imageLabel.ImageTransparency == 0
                     local isVideoPlaying = videoFrame.Visible and videoFrame.Video ~= "" and videoFrame.IsPlaying
                     if not isImageDisplayed and not isVideoPlaying then
                         mainFrame.BackgroundTransparency = math.min(value, 0.8)
@@ -979,8 +979,8 @@ function Gghiza07UI:CreateWindow(config)
                     if success then
                         mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                         mainFrame.BackgroundTransparency = 0.2
-                        backgroundImage.Image = ""
-                        backgroundImage.Visible = true
+                        imageLabel.Image = ""
+                        imageLabel.Visible = true
                         videoFrame.Video = ""
                         videoFrame.Visible = false
                         elementStates.Toggles = {}
@@ -1000,7 +1000,7 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local function loadSettings()
-        backgroundImage.Visible = true
+        imageLabel.Visible = true
         videoFrame.Visible = false
 
         local bgImage = loadData(BACKGROUND_FILE, "")
@@ -1022,9 +1022,9 @@ function Gghiza07UI:CreateWindow(config)
             end
             if success then
                 debugPrint("Saved image preloaded successfully")
-                backgroundImage.Image = bgImage
-                backgroundImage.Visible = true
-                backgroundImage.ZIndex = 5
+                imageLabel.Image = bgImage
+                imageLabel.Visible = true
+                imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
 
@@ -1036,17 +1036,17 @@ function Gghiza07UI:CreateWindow(config)
                     if elapsed >= timeout then
                         connection:Disconnect()
                         debugPrint("Saved image load timeout")
-                        if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 1 then
+                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
                             debugPrint("Saved image still set but not displayed, assuming failure")
-                            backgroundImage.Image = ""
-                            backgroundImage.Visible = false
+                            imageLabel.Image = ""
+                            imageLabel.Visible = false
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                         end
                         return
                     end
 
-                    if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 0 then
+                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
                         debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
@@ -1054,9 +1054,9 @@ function Gghiza07UI:CreateWindow(config)
                 end)
             else
                 debugPrint("Failed to preload saved image after retries, trying direct load")
-                backgroundImage.Image = bgImage
-                backgroundImage.Visible = true
-                backgroundImage.ZIndex = 5
+                imageLabel.Image = bgImage
+                imageLabel.Visible = true
+                imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
                 videoFrame.Visible = false
 
@@ -1067,16 +1067,16 @@ function Gghiza07UI:CreateWindow(config)
                     elapsed = elapsed + deltaTime
                     if elapsed >= timeout then
                         connection:Disconnect()
-                        if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 1 then
+                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
                             debugPrint("Saved image failed to load (transparency still 1)")
-                            backgroundImage.Image = ""
-                            backgroundImage.Visible = false
+                            imageLabel.Image = ""
+                            imageLabel.Visible = false
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                         end
                         return
                     end
-                    if backgroundImage.Image == bgImage and backgroundImage.ImageTransparency == 0 then
+                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
                         debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
@@ -1091,7 +1091,7 @@ function Gghiza07UI:CreateWindow(config)
             local success, err = pcall(function()
                 videoFrame.Video = bgVideo
                 videoFrame.Visible = true
-                backgroundImage.Visible = false
+                imageLabel.Visible = false
                 videoFrame.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
                 videoFrame:Play()
@@ -1109,7 +1109,7 @@ function Gghiza07UI:CreateWindow(config)
                             debugPrint("Saved video still set but not playing, assuming failure")
                             videoFrame.Video = ""
                             videoFrame.Visible = false
-                            backgroundImage.Visible = true
+                            imageLabel.Visible = true
                             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                         end
@@ -1126,13 +1126,13 @@ function Gghiza07UI:CreateWindow(config)
                 debugPrint("Failed to load saved background video:", err)
                 videoFrame.Video = ""
                 videoFrame.Visible = false
-                backgroundImage.Visible = true
+                imageLabel.Visible = true
                 mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                 mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             end
         end
 
-        if not backgroundImage.Visible and not videoFrame.Visible then
+        if not imageLabel.Visible and not videoFrame.Visible then
             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             debugPrint("No saved image or video, MainFrame Transparency:", mainFrame.BackgroundTransparency)
