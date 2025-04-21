@@ -48,7 +48,7 @@ function Gghiza07UI:CreateWindow(config)
     local VIDEO_FILE = SETTINGS_FOLDER .. "/video.txt"
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
-    local SOUND_FILE = SETTINGS_FOLDER .. "/sound.json" -- ไฟล์สำหรับบันทึก Sound ID
+    local SOUND_FILE = SETTINGS_FOLDER .. "/sound.json"
 
     local elementStates = {
         Toggles = {},
@@ -289,16 +289,16 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
-    -- ตั้งค่า Sound object
+    -- ตั้งค่า Sound object โดยเริ่มต้นไม่มีเสียง
     local buttonClickSound = Instance.new("Sound")
     buttonClickSound.Name = "ButtonClickSound"
-    buttonClickSound.SoundId = "rbxassetid://9120386436" -- ค่าเริ่มต้น
+    buttonClickSound.SoundId = "" -- เริ่มต้นเป็นค่าว่าง (ไม่มีเสียง)
     buttonClickSound.Parent = screenGui
     buttonClickSound.Volume = 1
 
     -- โหลด Sound ID ที่บันทึกไว้ (ถ้ามี)
-    local savedSound = loadData(SOUND_FILE, {SoundId = "9120386436"})
-    if savedSound and savedSound.SoundId then
+    local savedSound = loadData(SOUND_FILE, {SoundId = ""})
+    if savedSound and savedSound.SoundId and savedSound.SoundId ~= "" then
         buttonClickSound.SoundId = "rbxassetid://" .. savedSound.SoundId
         debugPrint("Loaded saved Sound ID:", buttonClickSound.SoundId)
     end
@@ -364,7 +364,11 @@ function Gghiza07UI:CreateWindow(config)
             toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         end
 
-        buttonClickSound:Play()
+        if buttonClickSound.SoundId ~= "" then
+            buttonClickSound:Play()
+        else
+            debugPrint("No sound set for toggleUI")
+        end
         showNotification("UI " .. (targetState and "Opened" or "Closed"))
     end
 
@@ -458,7 +462,11 @@ function Gghiza07UI:CreateWindow(config)
             end
             tabButton.BackgroundColor3 = theme.AccentColor
 
-            buttonClickSound:Play()
+            if buttonClickSound.SoundId ~= "" then
+                buttonClickSound:Play()
+            else
+                debugPrint("No sound set for selectTab")
+            end
             showNotification("Switched to " .. tabName)
         end
 
@@ -489,7 +497,12 @@ function Gghiza07UI:CreateWindow(config)
             cornerButton.Parent = button
 
             button.MouseButton1Click:Connect(function()
-                buttonClickSound:Play()
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                else
+                    debugPrint("No sound set for button click")
+                    showNotification("No sound set")
+                end
                 showNotification("Clicked " .. (buttonConfig.Name or "Button"))
 
                 if buttonConfig.Callback then
@@ -560,7 +573,11 @@ function Gghiza07UI:CreateWindow(config)
                 elementStates.Toggles[toggleConfig.Name] = toggleState
                 saveData(ELEMENTS_FILE, elementStates)
                 
-                buttonClickSound:Play()
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                else
+                    debugPrint("No sound set for toggle")
+                end
                 showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
 
                 if toggleConfig.Callback then
@@ -657,7 +674,11 @@ function Gghiza07UI:CreateWindow(config)
                         sliderFill.Size = UDim2.new(newValue, 0, 1, 0)
                         valueLabel.Text = string.format("%.2f", value)
 
-                        buttonClickSound:Play()
+                        if buttonClickSound.SoundId ~= "" then
+                            buttonClickSound:Play()
+                        else
+                            debugPrint("No sound set for slider")
+                        end
                         showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
 
                         if sliderConfig.Callback then
@@ -740,7 +761,11 @@ function Gghiza07UI:CreateWindow(config)
                     dropdownButton.Text = tostring(option)
                     dropdownList.Visible = false
 
-                    buttonClickSound:Play()
+                    if buttonClick_SOUND_ID ~= "" then
+                        buttonClickSound:Play()
+                    else
+                        debugPrint("No sound set for dropdown")
+                    end
                     showNotification("Selected " .. tostring(option))
 
                     if dropdownConfig.Callback then
@@ -758,7 +783,11 @@ function Gghiza07UI:CreateWindow(config)
 
             dropdownButton.MouseButton1Click:Connect(function()
                 dropdownList.Visible = not dropdownList.Visible
-                buttonClickSound:Play()
+                if buttonClickSound.SoundId ~= "" then
+                    buttonClickSound:Play()
+                else
+                    debugPrint("No sound set for dropdown")
+                end
                 showNotification("Dropdown " .. (dropdownList.Visible and "Opened" or "Closed"))
             end)
 
@@ -816,7 +845,11 @@ function Gghiza07UI:CreateWindow(config)
                     elementStates.Inputs[inputConfig.Name] = textBox.Text
                     saveData(ELEMENTS_FILE, elementStates)
 
-                    buttonClickSound:Play()
+                    if buttonClickSound.SoundId ~= "" then
+                        buttonClickSound:Play()
+                    else
+                        debugPrint("No sound set for input")
+                    end
                     showNotification("Input updated: " .. textBox.Text)
 
                     if inputConfig.Callback then
@@ -1065,29 +1098,36 @@ function Gghiza07UI:CreateWindow(config)
             -- เพิ่ม Input สำหรับเปลี่ยน Sound ID
             bgTab:AddInput({
                 Name = "Sound ID (Number only)",
-                Default = savedSound.SoundId or "9120386436",
+                Default = savedSound.SoundId or "",
                 Callback = function(value)
+                    if value == "" then
+                        -- ถ้าป้อนค่าว่าง ให้ตั้งเป็นไม่มีเสียง
+                        buttonClickSound.SoundId = ""
+                        saveData(SOUND_FILE, {SoundId = ""})
+                        showNotification("Sound disabled")
+                        debugPrint("Sound disabled")
+                        return
+                    end
+
                     if value:match("^%d+$") then
                         local soundId = "rbxassetid://" .. value
                         debugPrint("Attempting to load sound:", soundId)
 
                         local success, err = pcall(function()
-                            -- ลองโหลดเสียง
                             ContentProvider:PreloadAsync({soundId})
                             buttonClickSound.SoundId = soundId
-                            buttonClickSound:Play() -- ลองเล่นเพื่อยืนยัน
+                            buttonClickSound:Play()
                         end)
 
                         if success then
                             debugPrint("Sound loaded successfully")
                             showNotification("Sound updated to ID: " .. value)
-                            -- บันทึก Sound ID
                             saveData(SOUND_FILE, {SoundId = value})
                         else
                             warn("Failed to load sound:", err)
                             showNotification("Failed to load Sound ID: " .. value)
-                            -- คืนค่า Sound ID เดิม
-                            buttonClickSound.SoundId = "rbxassetid://9120386436"
+                            buttonClickSound.SoundId = ""
+                            saveData(SOUND_FILE, {SoundId = ""})
                         end
                     else
                         warn("Invalid Sound ID format. Use a number only (e.g., 9120386436)")
@@ -1131,9 +1171,9 @@ function Gghiza07UI:CreateWindow(config)
                         videoFrame.Visible = false
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
-                        buttonClickSound.SoundId = "rbxassetid://9120386436" -- รีเซ็ต Sound ID
+                        buttonClickSound.SoundId = "" -- รีเซ็ตเป็นไม่มีเสียง
                         saveData(ELEMENTS_FILE, elementStates)
-                        saveData(SOUND_FILE, {SoundId = "9120386436"})
+                        saveData(SOUND_FILE, {SoundId = ""})
                         debugPrint("Settings reset successfully")
                     else
                         warn("Failed to reset settings:", err)
