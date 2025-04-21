@@ -5,7 +5,7 @@ local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
-local VERSION = "V4.12 Enhanced"
+local VERSION = "V0.1"
 local LOCKED = false
 local DEBUG_MODE = false
 
@@ -50,7 +50,8 @@ function Gghiza07UI:CreateWindow(config)
 
     local elementStates = {
         Toggles = {},
-        Inputs = {}
+        Inputs = {},
+        MultiDropdowns = {}
     }
 
     local defaultTheme = {
@@ -120,10 +121,10 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}})
+    elementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, MultiDropdowns = {}})
     if not isfile(ELEMENTS_FILE) then
         debugPrint("No elements file found, resetting elementStates")
-        elementStates = {Toggles = {}, Inputs = {}}
+        elementStates = {Toggles = {}, Inputs = {}, MultiDropdowns = {}}
     end
 
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
@@ -184,6 +185,7 @@ function Gghiza07UI:CreateWindow(config)
     mainFrame.BackgroundTransparency = theme.Transparency
     mainFrame.ZIndex = 1
     mainFrame.Parent = screenGui
+    mainFrame.ClipsDescendants = true
     debugPrint("MainFrame created with Parent:", mainFrame.Parent)
 
     local corner = Instance.new("UICorner")
@@ -286,11 +288,66 @@ function Gghiza07UI:CreateWindow(config)
     cornerToggle.CornerRadius = UDim.new(0, 15)
     cornerToggle.Parent = toggleButton
 
+    local isAnimating = false
+
     local function toggleUI(state)
+        if isAnimating then return end
+        isAnimating = true
+
+        local tweenInfo = TweenInfo.new(
+            0.5,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.Out
+        )
+
         if state ~= nil then
-            mainFrame.Visible = state
+            mainFrame.Visible = true
+            if state then
+                mainFrame.Size = UDim2.new(0, 0, 0, 0)
+                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+                local openTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0.8, 0, 0.8, 0),
+                    Position = UDim2.new(0.1, 0, 0.1, 0)
+                })
+                openTween:Play()
+                openTween.Completed:Connect(function()
+                    isAnimating = false
+                end)
+            else
+                local closeTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                })
+                closeTween:Play()
+                closeTween.Completed:Connect(function()
+                    mainFrame.Visible = false
+                    isAnimating = false
+                end)
+            end
         else
-            mainFrame.Visible = not mainFrame.Visible
+            if mainFrame.Visible then
+                local closeTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0, 0, 0, 0),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                })
+                closeTween:Play()
+                closeTween.Completed:Connect(function()
+                    mainFrame.Visible = false
+                    isAnimating = false
+                end)
+            else
+                mainFrame.Visible = true
+                mainFrame.Size = UDim2.new(0, 0, 0, 0)
+                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+                local openTween = TweenService:Create(mainFrame, tweenInfo, {
+                    Size = UDim2.new(0.8, 0, 0.8, 0),
+                    Position = UDim2.new(0.1, 0, 0.1, 0)
+                })
+                openTween:Play()
+                openTween.Completed:Connect(function()
+                    isAnimating = false
+                end)
+            end
         end
         
         toggleButton.Text = mainFrame.Visible and "ON" or "OFF"
@@ -592,369 +649,288 @@ function Gghiza07UI:CreateWindow(config)
         end
 
         function tab:AddDropdown(dropdownConfig)
-            if not dropdownConfig or type(dropdownConfig) ~= "table" or not dropdownConfig.Options then
-                warn("Invalid dropdown config. Expected a table with Options.")
-                return
-            end
-
-            local dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Name = dropdownConfig.Name or "Dropdown"
-            dropdownFrame.Size = UDim2.new(1, -20, 0, 40)
-            dropdownFrame.BackgroundTransparency = 1
-            dropdownFrame.LayoutOrder = #tabContent:GetChildren()
-            dropdownFrame.ZIndex = 11
-            dropdownFrame.Active = true
-            dropdownFrame.Parent = tabContent
-
-            local dropdownButton = Instance.new("TextButton")
-            dropdownButton.Size = UDim2.new(1, 0, 1, 0)
-            dropdownButton.BackgroundColor3 = theme.AccentColor
-            dropdownButton.Text = dropdownConfig.Name or "Select Option"
-            dropdownButton.TextColor3 = theme.TextColor
-            dropdownButton.TextScaled = true
-            dropdownButton.ZIndex = 11
-            dropdownButton.Active = true
-            dropdownButton.AutoButtonColor = true
-            dropdownButton.Parent = dropdownFrame
-
-            local cornerDropdown = Instance.new("UICorner")
-            cornerDropdown.CornerRadius = UDim.new(0, 5)
-            cornerDropdown.Parent = dropdownButton
-
-            local dropdownList = Instance.new("Frame")
-            dropdownList.Size = UDim2.new(1, 0, 0, 0)
-            dropdownList.Position = UDim2.new(0, 0, 1, 0)
-            dropdownList.BackgroundColor3 = theme.BackgroundColor
-            dropdownList.Visible = false
-            dropdownList.ZIndex = 12
-            dropdownList.Active = true
-            dropdownList.Parent = dropdownFrame
-
-            local listLayout = Instance.new("UIListLayout")
-            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            listLayout.Parent = dropdownList
-
-            local function updateListHeight()
-                dropdownList.Size = UDim2.new(1, 0, 0, #dropdownConfig.Options * 30)
-            end
-
-            for i, option in ipairs(dropdownConfig.Options) do
-                local optionButton = Instance.new("TextButton")
-                optionButton.Size = UDim2.new(1, 0, 0, 30)
-                optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                optionButton.Text = tostring(option)
-                optionButton.TextColor3 = theme.TextColor
-                optionButton.TextScaled = true
-                optionButton.ZIndex = 13
-                optionButton.LayoutOrder = i
-                optionButton.Active = true
-                optionButton.AutoButtonColor = true
-                optionButton.Parent = dropdownList
-
-                optionButton.MouseButton1Click:Connect(function()
-                    dropdownButton.Text = tostring(option)
-                    dropdownList.Visible = false
-                    if dropdownConfig.Callback then
-                        local success, err = pcall(function()
-                            dropdownConfig.Callback(option)
-                        end)
-                        if not success then
-                            debugPrint("Dropdown callback error:", err)
-                        end
-                    end
-                end)
-            end
-
-            updateListHeight()
-
-            dropdownButton.MouseButton1Click:Connect(function()
-                dropdownList.Visible = not dropdownList.Visible
-            end)
-
-            updateCanvasSize()
-            return dropdownFrame
+            if not dropdownConfig or type(dropdownConfig) ~= "table" or not dropdownConfig.Options#+BEGIN_SRC lua
+            warn("Invalid dropdown config. Expected a table with Options.")
+            return
         end
 
-        function tab:AddInput(inputConfig)
-            if not inputConfig or type(inputConfig) ~= "table" then
-                warn("Invalid input config. Expected a table.")
-                return
-            end
+        local dropdownFrame = Instance.new("Frame")
+        dropdownFrame.Name = dropdownConfig.Name or "Dropdown"
+        dropdownFrame.Size = UDim2.new(1, -20, 0, 40)
+        dropdownFrame.BackgroundTransparency = 1
+        dropdownFrame.LayoutOrder = #tabContent:GetChildren()
+        dropdownFrame.ZIndex = 11
+        dropdownFrame.Active = true
+        dropdownFrame.Parent = tabContent
 
-            local inputFrame = Instance.new("Frame")
-            inputFrame.Name = inputConfig.Name or "Input"
-            inputFrame.Size = UDim2.new(1, -20, 0, 40)
-            inputFrame.BackgroundTransparency = 1
-            inputFrame.LayoutOrder = #tabContent:GetChildren()
-            inputFrame.ZIndex = 11
-            inputFrame.Active = true
-            inputFrame.Parent = tabContent
+        local dropdownButton = Instance.new("TextButton")
+        dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+        dropdownButton.BackgroundColor3 = theme.AccentColor
+        dropdownButton.Text = dropdownConfig.Name or "Select Option"
+        dropdownButton.TextColor3 = theme.TextColor
+        dropdownButton.TextScaled = true
+        dropdownButton.ZIndex = 11
+        dropdownButton.Active = true
+        dropdownButton.AutoButtonColor = true
+        dropdownButton.Parent = dropdownFrame
 
-            local inputLabel = Instance.new("TextLabel")
-            inputLabel.Size = UDim2.new(0.4, 0, 1, 0)
-            inputLabel.BackgroundTransparency = 1
-            inputLabel.Text = inputConfig.Name or "Input"
-            inputLabel.TextColor3 = theme.TextColor
-            inputLabel.TextScaled = true
-            inputLabel.TextXAlignment = Enum.TextXAlignment.Left
-            inputLabel.ZIndex = 11
-            inputLabel.Parent = inputFrame
+        local cornerDropdown = Instance.new("UICorner")
+        cornerDropdown.CornerRadius = UDim.new(0, 5)
+        cornerDropdown.Parent = dropdownButton
 
-            local defaultText = inputConfig.Default or ""
-            if elementStates.Inputs[inputConfig.Name] ~= nil then
-                defaultText = elementStates.Inputs[inputConfig.Name]
-            end
+        local dropdownList = Instance.new("Frame")
+        dropdownList.Size = UDim2.new(1, 0, 0, 0)
+        dropdownList.Position = UDim2.new(0, 0, 1, 0)
+        dropdownList.BackgroundColor3 = theme.BackgroundColor
+        dropdownList.Visible = false
+        dropdownList.ZIndex = 12
+        dropdownList.Active = true
+        dropdownList.Parent = dropdownFrame
 
-            local textBox = Instance.new("TextBox")
-            textBox.Size = UDim2.new(0.6, 0, 0.8, 0)
-            textBox.Position = UDim2.new(0.4, 0, 0.1, 0)
-            textBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            textBox.Text = defaultText
-            textBox.TextColor3 = theme.TextColor
-            textBox.TextScaled = true
-            textBox.TextEditable = true
-            textBox.ZIndex = 11
-            textBox.Parent = inputFrame
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Parent = dropdownList
 
-            local cornerInput = Instance.new("UICorner")
-            cornerInput.CornerRadius = UDim.new(0, 5)
-            cornerInput.Parent = textBox
+        local function updateListHeight()
+            dropdownList.Size = UDim2.new(1, 0, 0, #dropdownConfig.Options * 30)
+        end
 
-            textBox.FocusLost:Connect(function(enterPressed)
-                if enterPressed then
-                    elementStates.Inputs[inputConfig.Name] = textBox.Text
-                    saveData(ELEMENTS_FILE, elementStates)
-                    if inputConfig.Callback then
-                        local success, err = pcall(function()
-                            inputConfig.Callback(textBox.Text)
-                        end)
-                        if not success then
-                            debugPrint("Input callback error:", err)
-                        end
+        for i, option in ipairs(dropdownConfig.Options) do
+            local optionButton = Instance.new("TextButton")
+            optionButton.Size = UDim2.new(1, 0, 0, 30)
+            optionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            optionButton.Text = tostring(option)
+            optionButton.TextColor3 = theme.TextColor
+            optionButton.TextScaled = true
+            optionButton.ZIndex = 13
+            optionButton.LayoutOrder = i
+            optionButton.Active = true
+            optionButton.AutoButtonColor = true
+            optionButton.Parent = dropdownList
+
+            optionButton.MouseButton1Click:Connect(function()
+                dropdownButton.Text = tostring(option)
+                dropdownList.Visible = false
+                if dropdownConfig.Callback then
+                    local success, err = pcall(function()
+                        dropdownConfig.Callback(option)
+                    end)
+                    if not success then
+                        debugPrint("Dropdown callback error:", err)
                     end
                 end
             end)
-
-            updateCanvasSize()
-            return inputFrame
         end
 
-        function tab:AddBackgroundOptions()
-            local bgTab = self
-            
-            bgTab:AddInput({
-                Name = "Background Color (R,G,B)",
-                Default = "30,30,30",
-                Callback = function(value)
-                    local r, g, b = value:match("(%d+),%s*(%d+),%s*(%d+)")
-                    if r and g and b then
-                        local color = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
-                        debugPrint("Setting BackgroundColor3 to:", r, g, b)
-                        mainFrame.BackgroundColor3 = color
-                        theme.BackgroundColor = color
-                        local themeToSave = {
-                            BackgroundColor = color3ToTable(theme.BackgroundColor),
-                            AccentColor = color3ToTable(theme.AccentColor),
-                            TextColor = color3ToTable(theme.TextColor),
-                            CornerRadius = theme.CornerRadius,
-                            Transparency = theme.Transparency
-                        }
-                        saveData(THEME_FILE, themeToSave)
-                        debugPrint("MainFrame BackgroundColor3:", mainFrame.BackgroundColor3.R * 255, mainFrame.BackgroundColor3.G * 255, mainFrame.BackgroundColor3.B * 255)
-                    else
-                        warn("Invalid RGB format. Use: R,G,B (e.g., 30,30,30)")
+        updateListHeight()
+
+        dropdownButton.MouseButton1Click:Connect(function()
+            dropdownList.Visible = not dropdownList.Visible
+        end)
+
+        updateCanvasSize()
+        return dropdownFrame
+    end
+
+    function tab:AddMultiDropdown(multiDropdownConfig)
+        if not multiDropdownConfig or type(multiDropdownConfig) ~= "table" or not multiDropdownConfig.Options then
+            warn("Invalid multi-dropdown config. Expected a table with Options.")
+            return
+        end
+
+        local dropdownFrame = Instance.new("Frame")
+        dropdownFrame.Name = multiDropdownConfig.Name or "MultiDropdown"
+        dropdownFrame.Size = UDim2.new(1, -20, 0, 40)
+        dropdownFrame.BackgroundTransparency = 1
+        dropdownFrame.LayoutOrder = #tabContent:GetChildren()
+        dropdownFrame.ZIndex = 11
+        dropdownFrame.Active = true
+        dropdownFrame.Parent = tabContent
+
+        local dropdownButton = Instance.new("TextButton")
+        dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+        dropdownButton.BackgroundColor3 = theme.AccentColor
+        dropdownButton.Text = multiDropdownConfig.Name or "Select Options"
+        dropdownButton.TextColor3 = theme.TextColor
+        dropdownButton.TextScaled = true
+        dropdownButton.ZIndex = 11
+        dropdownButton.Active = true
+        dropdownButton.AutoButtonColor = true
+        dropdownButton.Parent = dropdownFrame
+
+        local cornerDropdown = Instance.new("UICorner")
+        cornerDropdown.CornerRadius = UDim.new(0, 5)
+        cornerDropdown.Parent = dropdownButton
+
+        local dropdownList = Instance.new("Frame")
+        dropdownList.Size = UDim2.new(1, 0, 0, 0)
+        dropdownList.Position = UDim2.new(0, 0, 1, 0)
+        dropdownList.BackgroundColor3 = theme.BackgroundColor
+        dropdownList.Visible = false
+        dropdownList.ZIndex = 12
+        dropdownList.Active = true
+        dropdownList.Parent = dropdownFrame
+
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Parent = dropdownList
+
+        local selectedOptions = {}
+        if elementStates.MultiDropdowns[multiDropdownConfig.Name] then
+            selectedOptions = elementStates.MultiDropdowns[multiDropdownConfig.Name]
+            dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
+        end
+
+        local function updateListHeight()
+            dropdownList.Size = UDim2.new(1, 0, 0, #multiDropdownConfig.Options * 30)
+        end
+
+        local function updateButtonText()
+            dropdownButton.Text = #selectedOptions > 0 and table.concat(selectedOptions, ", ") or multiDropdownConfig.Name
+            elementStates.MultiDropdowns[multiDropdownConfig.Name] = selectedOptions
+            saveData(ELEMENTS_FILE, elementStates)
+        end
+
+        for i, option in ipairs(multiDropdownConfig.Options) do
+            local optionFrame = Instance.new("Frame")
+            optionFrame.Size = UDim2.new(1, 0, 0, 30)
+            optionFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            optionFrame.ZIndex = 13
+            optionFrame.LayoutOrder = i
+            optionFrame.Parent = dropdownList
+
+            local checkbox = Instance.new("TextButton")
+            checkbox.Size = UDim2.new(0.1, 0, 0.6, 0)
+            checkbox.Position = UDim2.new(0.05, 0, 0.2, 0)
+            checkbox.BackgroundColor3 = table.find(selectedOptions, option) and theme.AccentColor or Color3.fromRGB(100, 100, 100)
+            checkbox.Text = table.find(selectedOptions, option) and "✓" or ""
+            checkbox.TextColor3 = theme.TextColor
+            checkbox.TextScaled = true
+            checkbox.ZIndex = 14
+            checkbox.Active = true
+            checkbox.AutoButtonColor = true
+            checkbox.Parent = optionFrame
+
+            local optionLabel = Instance.new("TextLabel")
+            optionLabel.Size = UDim2.new(0.8, 0, 1, 0)
+            optionLabel.Position = UDim2.new(0.15, 0, 0, 0)
+            optionLabel.BackgroundTransparency = 1
+            optionLabel.Text = tostring(option)
+            optionLabel.TextColor3 = theme.TextColor
+            optionLabel.TextScaled = true
+            optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+            optionLabel.ZIndex = 14
+            optionLabel.Parent = optionFrame
+
+            checkbox.MouseButton1Click:Connect(function()
+                if table.find(selectedOptions, option) then
+                    table.remove(selectedOptions, table.find(selectedOptions, option))
+                    checkbox.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+                    checkbox.Text = ""
+                else
+                    table.insert(selectedOptions, option)
+                    checkbox.BackgroundColor3 = theme.AccentColor
+                    checkbox.Text = "✓"
+                end
+                updateButtonText()
+                if multiDropdownConfig.Callback then
+                    local success, err = pcall(function()
+                        multiDropdownConfig.Callback(selectedOptions)
+                    end)
+                    if not success then
+                        debugPrint("MultiDropdown callback error:", err)
                     end
                 end
-            })
-            
-            bgTab:AddInput({
-                Name = "Image ID (Number only, e.g., 5191098772)",
-                Callback = function(value)
-                    if value:match("^%d+$") then
-                        local thumbId = string.format("rbxthumb://type=Asset&id=%s&w=420&h=420", value)
-                        debugPrint("Using rbxthumb:// format:", thumbId)
+            end)
+        end
 
-                        local retries = 3
-                        local success = false
-                        for i = 1, retries do
-                            local attempt, err = pcall(function()
-                                ContentProvider:PreloadAsync({thumbId})
-                            end)
-                            if attempt then
-                                success = true
-                                break
-                            else
-                                debugPrint("Retry", i, "failed to preload image:", err)
-                                task.wait(1)
-                            end
-                        end
+        updateListHeight()
 
-                        if success then
-                            debugPrint("Image preloaded successfully after retries")
-                            imageLabel.Image = thumbId
-                            videoFrame.Visible = false
-                            imageLabel.Visible = true
-                            imageLabel.ZIndex = 5
-                            imageLabel.ImageTransparency = 0
-                            mainFrame.BackgroundTransparency = 1
+        dropdownButton.MouseButton1Click:Connect(function()
+            dropdownList.Visible = not dropdownList.Visible
+        end)
 
-                            local timeout = 20
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    debugPrint("Image load timeout")
-                                    if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
-                                        debugPrint("Image still set but not displayed, assuming failure")
-                                        imageLabel.Image = ""
-                                        imageLabel.Visible = false
-                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                        warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
-                                    end
-                                    return
-                                end
+        updateCanvasSize()
+        return dropdownFrame
+    end
 
-                                local loaded = pcall(function()
-                                    return ContentProvider:PreloadAsync({thumbId})
-                                end)
-                                if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
-                                    debugPrint("Image confirmed displayed")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(BACKGROUND_FILE, thumbId)
-                                end
-                            end)
-                        else
-                            warn("Failed to preload image after", retries, "attempts, trying direct load")
-                            imageLabel.Image = thumbId
-                            videoFrame.Visible = false
-                            imageLabel.Visible = true
-                            imageLabel.ZIndex = 5
-                            imageLabel.ImageTransparency = 0
-                            mainFrame.BackgroundTransparency = 1
+    function tab:AddInput(inputConfig)
+        if not inputConfig or type(inputConfig) ~= "table" then
+            warn("Invalid input config. Expected a table.")
+            return
+        end
 
-                            local timeout = 20
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
-                                        debugPrint("Image failed to load (transparency still 1)")
-                                        imageLabel.Image = ""
-                                        imageLabel.Visible = false
-                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                        warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
-                                    end
-                                    return
-                                end
+        local inputFrame = Instance.new("Frame")
+        inputFrame.Name = inputConfig.Name or "Input"
+        inputFrame.Size = UDim2.new(1, -20, 0, 40)
+        inputFrame.BackgroundTransparency = 1
+        inputFrame.LayoutOrder = #tabContent:GetChildren()
+        inputFrame.ZIndex = 11
+        inputFrame.Active = true
+        inputFrame.Parent = tabContent
 
-                                local loaded = pcall(function()
-                                    return ContentProvider:PreloadAsync({thumbId})
-                                end)
-                                if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
-                                    debugPrint("Image confirmed displayed")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(BACKGROUND_FILE, thumbId)
-                                end
-                            end)
-                        end
-                    else
-                        warn("Invalid Image ID format. Use a number only (e.g., 5191098772)")
-                        imageLabel.Image = ""
-                        imageLabel.Visible = false
-                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        local inputLabel = Instance.new("TextLabel")
+        inputLabel.Size = UDim2.new(0.4, 0, 1, 0)
+        inputLabel.BackgroundTransparency = 1
+        inputLabel.Text = inputConfig.Name or "Input"
+        inputLabel.TextColor3 = theme.TextColor
+        inputLabel.TextScaled = true
+        inputLabel.TextXAlignment = Enum.TextXAlignment.Left
+        inputLabel.ZIndex = 11
+        inputLabel.Parent = inputFrame
+
+        local defaultText = inputConfig.Default or ""
+        if elementStates.Inputs[inputConfig.Name] ~= nil then
+            defaultText = elementStates.Inputs[inputConfig.Name]
+        end
+
+        local textBox = Instance.new("TextBox")
+        textBox.Size = UDim2.new(0.6, 0, 0.8, 0)
+        textBox.Position = UDim2.new(0.4, 0, 0.1, 0)
+        textBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        textBox.Text = defaultText
+        textBox.TextColor3 = theme.TextColor
+        textBox.TextScaled = true
+        textBox.TextEditable = true
+        textBox.ZIndex = 11
+        textBox.Parent = inputFrame
+
+        local cornerInput = Instance.new("UICorner")
+        cornerInput.CornerRadius = UDim.new(0, 5)
+        cornerInput.Parent = textBox
+
+        textBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed then
+                elementStates.Inputs[inputConfig.Name] = textBox.Text
+                saveData(ELEMENTS_FILE, elementStates)
+                if inputConfig.Callback then
+                    local success, err = pcall(function()
+                        inputConfig.Callback(textBox.Text)
+                    end)
+                    if not success then
+                        debugPrint("Input callback error:", err)
                     end
                 end
-            })
-            
-            bgTab:AddInput({
-                Name = "Video ID (rbxassetid:// or number)",
-                Callback = function(value)
-                    if value:match("^rbxassetid://%d+$") or value:match("^%d+$") then
-                        if not value:match("^rbxassetid://") then
-                            value = "rbxassetid://"..value
-                        end
-                        debugPrint("Attempting to load video:", value)
-                        local success, err = pcall(function()
-                            videoFrame.Video = value
-                            videoFrame.Visible = true
-                            imageLabel.Visible = false
-                            videoFrame.ZIndex = 5
-                            mainFrame.BackgroundTransparency = 1
-                            videoFrame:Play()
-                        end)
-                        if success then
-                            debugPrint("Video loaded successfully")
-                            local timeout = 15
-                            local elapsed = 0
-                            local connection
-                            connection = RunService.Heartbeat:Connect(function(deltaTime)
-                                elapsed = elapsed + deltaTime
-                                if elapsed >= timeout then
-                                    connection:Disconnect()
-                                    debugPrint("Video load timeout")
-                                    if videoFrame.Video == value and not videoFrame.IsPlaying then
-                                        debugPrint("Video still set but not playing, assuming failure")
-                                        videoFrame.Video = ""
-                                        videoFrame.Visible = false
-                                        imageLabel.Visible = true
-                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                        warn("Video failed to load after timeout. Check if the Video ID is valid or accessible.")
-                                    end
-                                    return
-                                end
+            end
+        end)
 
-                                if videoFrame.Video == value and videoFrame.IsPlaying then
-                                    debugPrint("Video confirmed playing")
-                                    connection:Disconnect()
-                                    mainFrame.BackgroundTransparency = 1
-                                    saveData(VIDEO_FILE, value)
-                                end
-                            end)
-                        else
-                            warn("Failed to load video:", err)
-                            videoFrame.Video = ""
-                            videoFrame.Visible = false
-                            imageLabel.Visible = true
-                            mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        end
-                    else
-                        warn("Invalid Video ID format. Use rbxassetid:// followed by numbers or just the numbers (e.g., rbxassetid://1234567890 or 1234567890)")
-                        videoFrame.Video = ""
-                        videoFrame.Visible = false
-                        imageLabel.Visible = true
-                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                    end
-                end
-            })
-            
-            bgTab:AddSlider({
-                Name = "Transparency",
-                Min = 0,
-                Max = 1,
-                Default = theme.Transparency,
-                Callback = function(value)
-                    debugPrint("Setting Transparency to:", value)
-                    theme.Transparency = value
-                    local isImageDisplayed = imageLabel.Visible and imageLabel.Image ~= "" and imageLabel.ImageTransparency == 0
-                    local isVideoPlaying = videoFrame.Visible and videoFrame.Video ~= "" and videoFrame.IsPlaying
-                    if not isImageDisplayed and not isVideoPlaying then
-                        mainFrame.BackgroundTransparency = math.min(value, 0.8)
-                        debugPrint("No image or video displayed, MainFrame Transparency updated to:", mainFrame.BackgroundTransparency)
-                    else
-                        debugPrint("Image or video is displayed, keeping MainFrame Transparency at 1")
-                    end
+        updateCanvasSize()
+        return inputFrame
+    end
+
+    function tab:AddBackgroundOptions()
+        local bgTab = self
+        
+        bgTab:AddInput({
+            Name = "Background Color (R,G,B)",
+            Default = "30,30,30",
+            Callback = function(value)
+                local r, g, b = value:match("(%d+),%s*(%d+),%s*(%d+)")
+                if r and g and b then
+                    local color = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+                    debugPrint("Setting BackgroundColor3 to:", r, g, b)
+                    mainFrame.BackgroundColor3 = color
+                    theme.BackgroundColor = color
                     local themeToSave = {
                         BackgroundColor = color3ToTable(theme.BackgroundColor),
                         AccentColor = color3ToTable(theme.AccentColor),
@@ -963,57 +939,258 @@ function Gghiza07UI:CreateWindow(config)
                         Transparency = theme.Transparency
                     }
                     saveData(THEME_FILE, themeToSave)
-                    debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
+                    debugPrint("MainFrame BackgroundColor3:", mainFrame.BackgroundColor3.R * 255, mainFrame.BackgroundColor3.G * 255, mainFrame.BackgroundColor3.B * 255)
+                else
+                    warn("Invalid RGB format. Use: R,G,B (e.g., 30,30,30)")
                 end
-            })
+            end
+        })
+        
+        bgTab:AddInput({
+            Name = "Image ID (Number only)",
+            Callback = function(value)
+                if value:match("^%d+$") then
+                    local thumbId = string.format("rbxthumb://type=Asset&id=%s&w=420&h=420", value)
+                    debugPrint("Using rbxthumb:// format:", thumbId)
 
-            bgTab:AddButton({
-                Name = "Pause/Play Video",
-                Callback = function()
-                    if videoFrame.IsLoaded then
-                        if videoFrame.IsPlaying then
-                            videoFrame:Pause()
-                            debugPrint("Video paused")
+                    local retries = 3
+                    local success = false
+                    for i = 1, retries do
+                        local attempt, err = pcall(function()
+                            ContentProvider:PreloadAsync({thumbId})
+                        end)
+                        if attempt then
+                            success = true
+                            break
                         else
-                            videoFrame:Play()
-                            debugPrint("Video playing")
+                            debugPrint("Retry", i, "failed to preload image:", err)
+                            task.wait(1)
                         end
-                    else
-                        debugPrint("No video loaded")
                     end
-                end
-            })
 
-            bgTab:AddButton({
-                Name = "Reset Settings",
-                Callback = function()
+                    if success then
+                        debugPrint("Image preloaded successfully after retries")
+                        imageLabel.Image = thumbId
+                        videoFrame.Visible = false
+                        imageLabel.Visible = true
+                        imageLabel.ZIndex = 5
+                        imageLabel.ImageTransparency = 0
+                        mainFrame.BackgroundTransparency = 1
+
+                        local timeout = 20
+                        local elapsed = 0
+                        local connection
+                        connection = RunService.Heartbeat:Connect(function(deltaTime)
+                            elapsed = elapsed + deltaTime
+                            if elapsed >= timeout then
+                                connection:Disconnect()
+                                debugPrint("Image load timeout")
+                                if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
+                                    debugPrint("Image still set but not displayed, assuming failure")
+                                    imageLabel.Image = ""
+                                    imageLabel.Visible = false
+                                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                                    warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
+                                end
+                                return
+                            end
+
+                            local loaded = pcall(function()
+                                return ContentProvider:PreloadAsync({thumbId})
+                            end)
+                            if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
+                                debugPrint("Image confirmed displayed")
+                                connection:Disconnect()
+                                mainFrame.BackgroundTransparency = 1
+                                saveData(BACKGROUND_FILE, thumbId)
+                            end
+                        end)
+                    else
+                        warn("Failed to preload image after", retries, "attempts, trying direct load")
+                        imageLabel.Image = thumbId
+                        videoFrame.Visible = false
+                        imageLabel.Visible = true
+                        imageLabel.ZIndex = 5
+                        imageLabel.ImageTransparency = 0
+                        mainFrame.BackgroundTransparency = 1
+
+                        local timeout = 20
+                        local elapsed = 0
+                        local connection
+                        connection = RunService.Heartbeat:Connect(function(deltaTime)
+                            elapsed = elapsed + deltaTime
+                            if elapsed >= timeout then
+                                connection:Disconnect()
+                                if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
+                                    debugPrint("Image failed to load (transparency still 1)")
+                                    imageLabel.Image = ""
+                                    imageLabel.Visible = false
+                                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                                    warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
+                                end
+                                return
+                            end
+
+                            local loaded = pcall(function()
+                                return ContentProvider:PreloadAsync({thumbId})
+                            end)
+                            if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
+                                debugPrint("Image confirmed displayed")
+                                connection:Disconnect()
+                                mainFrame.BackgroundTransparency = 1
+                                saveData(BACKGROUND_FILE, thumbId)
+                            end
+                        end)
+                    end
+                else
+                    warn("Invalid Image ID format. Use a number only (e.g., 5191098772)")
+                    imageLabel.Image = ""
+                    imageLabel.Visible = false
+                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                end
+            end
+        })
+        
+        bgTab:AddInput({
+            Name = "Video ID (rbxassetid:// or number)",
+            Callback = function(value)
+                if value:match("^rbxassetid://%d+$") or value:match("^%d+$") then
+                    if not value:match("^rbxassetid://") then
+                        value = "rbxassetid://"..value
+                    end
+                    debugPrint("Attempting to load video:", value)
                     local success, err = pcall(function()
-                        if isfolder(SETTINGS_FOLDER) then
-                            delfolder(SETTINGS_FOLDER)
-                            debugPrint("Deleted settings folder:", SETTINGS_FOLDER)
-                        end
+                        videoFrame.Video = value
+                        videoFrame.Visible = true
+                        imageLabel.Visible = false
+                        videoFrame.ZIndex = 5
+                        mainFrame.BackgroundTransparency = 1
+                        videoFrame:Play()
                     end)
                     if success then
-                        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                        mainFrame.BackgroundTransparency = 0.2
-                        imageLabel.Image = ""
-                        imageLabel.Visible = true
+                        debugPrint("Video loaded successfully")
+                        local timeout = 15
+                        local elapsed = 0
+                        local connection
+                        connection = RunService.Heartbeat:Connect(function(deltaTime)
+                            elapsed = elapsed + deltaTime
+                            if elapsed >= timeout then
+                                connection:Disconnect()
+                                debugPrint("Video load timeout")
+                                if videoFrame.Video == value and not videoFrame.IsPlaying then
+                                    debugPrint("Video still set but not playing, assuming failure")
+                                    videoFrame.Video = ""
+                                    videoFrame.Visible = false
+                                    imageLabel.Visible = true
+                                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                                    warn("Video failed to load after timeout. Check if the Video ID is valid or accessible.")
+                                end
+                                return
+                            end
+
+                            if videoFrame.Video == value and videoFrame.IsPlaying then
+                                debugPrint("Video confirmed playing")
+                                connection:Disconnect()
+                                mainFrame.BackgroundTransparency = 1
+                                saveData(VIDEO_FILE, value)
+                            end
+                        end)
+                    else
+                        warn("Failed to load video:", err)
                         videoFrame.Video = ""
                         videoFrame.Visible = false
-                        elementStates.Toggles = {}
-                        elementStates.Inputs = {}
-                        saveData(ELEMENTS_FILE, elementStates)
-                        debugPrint("Settings reset successfully")
-                    else
-                        warn("Failed to reset settings:", err)
+                        imageLabel.Visible = true
+                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                     end
+                else
+                    warn("Invalid Video ID format. Use rbxassetid:// followed by numbers or just the numbers (e.g., rbxassetid://1234567890 or 1234567890)")
+                    videoFrame.Video = ""
+                    videoFrame.Visible = false
+                    imageLabel.Visible = true
+                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                 end
-            })
+            end
+        })
+        
+        bgTab:AddSlider({
+            Name = "Transparency",
+            Min = 0,
+            Max = 1,
+            Default = theme.Transparency,
+            Callback = function(value)
+                debugPrint("Setting Transparency to:", value)
+                theme.Transparency = value
+                local isImageDisplayed = imageLabel.Visible and imageLabel.Image ~= "" and imageLabel.ImageTransparency == 0
+                local isVideoPlaying = videoFrame.Visible and videoFrame.Video ~= "" and videoFrame.IsPlaying
+                if not isImageDisplayed and not isVideoPlaying then
+                    mainFrame.BackgroundTransparency = math.min(value, 0.8)
+                    debugPrint("No image or video displayed, MainFrame Transparency updated to:", mainFrame.BackgroundTransparency)
+                else
+                    debugPrint("Image or video is displayed, keeping MainFrame Transparency at 1")
+                end
+                local themeToSave = {
+                    BackgroundColor = color3ToTable(theme.BackgroundColor),
+                    AccentColor = color3ToTable(theme.AccentColor),
+                    TextColor = color3ToTable(theme.TextColor),
+                    CornerRadius = theme.CornerRadius,
+                    Transparency = theme.Transparency
+                }
+                saveData(THEME_FILE, themeToSave)
+                debugPrint("MainFrame Transparency:", mainFrame.BackgroundTransparency)
+            end
+        })
 
-            updateCanvasSize()
-        end
+        bgTab:AddButton({
+            Name = "Pause/Play Video",
+            Callback = function()
+                if videoFrame.IsLoaded then
+                    if videoFrame.IsPlaying then
+                        videoFrame:Pause()
+                        debugPrint("Video paused")
+                    else
+                        videoFrame:Play()
+                        debugPrint("Video playing")
+                    end
+                else
+                    debugPrint("No video loaded")
+                end
+            end
+        })
 
-        return tab
+        bgTab:AddButton({
+            Name = "Reset Settings",
+            Callback = function()
+                local success, err = pcall(function()
+                    if isfolder(SETTINGS_FOLDER) then
+                        delfolder(SETTINGS_FOLDER)
+                        debugPrint("Deleted settings folder:", SETTINGS_FOLDER)
+                    end
+                end)
+                if success then
+                    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    mainFrame.BackgroundTransparency = 0.2
+                    imageLabel.Image = ""
+                    imageLabel.Visible = true
+                    videoFrame.Video = ""
+                    videoFrame.Visible = false
+                    elementStates.Toggles = {}
+                    elementStates.Inputs = {}
+                    elementStates.MultiDropdowns = {}
+                    saveData(ELEMENTS_FILE, elementStates)
+                    debugPrint("Settings reset successfully")
+                else
+                    warn("Failed to reset settings:", err)
+                end
+            end
+        })
+
+        updateCanvasSize()
     end
 
     local function loadSettings()
@@ -1089,7 +1266,7 @@ function Gghiza07UI:CreateWindow(config)
                 local elapsed = 0
                 local connection
                 connection = RunService.Heartbeat:Connect(function(deltaTime)
-                    elapsed = elapsed + deltaTime
+                    elapsed = deltaTime
                     if elapsed >= timeout then
                         connection:Disconnect()
                         if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
@@ -1160,7 +1337,9 @@ function Gghiza07UI:CreateWindow(config)
         if not imageLabel.Visible and not videoFrame.Visible then
             mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
             mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            debugPrint("No saved image or video, MainFrame Transparency:", mainFrame.BackgroundTransparency)
+            debugPrint("No saved image or video,
+
+ MainFrame Transparency:", mainFrame.BackgroundTransparency)
             debugPrint("MainFrame BackgroundColor3 set to fallback:", mainFrame.BackgroundColor3)
         end
     end
