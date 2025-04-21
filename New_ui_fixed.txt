@@ -766,17 +766,13 @@ function Gghiza07UI:CreateWindow(config)
                     if value:match("^%d+$") then
                         -- แปลงตัวเลขให้เป็น rbxthumb://type=Asset&id=<Id>&w=420&h=420
                         local thumbId = string.format("rbxthumb://type=Asset&id=%s&w=420&h=420", value)
-                        debugPrint("Converted to rbxthumb:// format:", thumbId)
-
-                        -- ดึง ID เพื่อแปลงเป็น rbxassetid:// สำหรับโหลดภาพ
-                        local assetId = "rbxassetid://" .. value
-                        debugPrint("Loading image with rbxassetid:// format:", assetId)
+                        debugPrint("Using rbxthumb:// format:", thumbId)
 
                         local retries = 3
                         local success = false
                         for i = 1, retries do
                             local attempt, err = pcall(function()
-                                ContentProvider:PreloadAsync({assetId})
+                                ContentProvider:PreloadAsync({thumbId})
                             end)
                             if attempt then
                                 success = true
@@ -789,7 +785,7 @@ function Gghiza07UI:CreateWindow(config)
 
                         if success then
                             debugPrint("Image preloaded successfully after retries")
-                            imageLabel.Image = assetId
+                            imageLabel.Image = thumbId -- ใช้ rbxthumb:// โดยตรง
                             videoFrame.Visible = false
                             imageLabel.Visible = true
                             imageLabel.ZIndex = 5
@@ -804,7 +800,7 @@ function Gghiza07UI:CreateWindow(config)
                                 if elapsed >= timeout then
                                     connection:Disconnect()
                                     debugPrint("Image load timeout")
-                                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
+                                    if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
                                         debugPrint("Image still set but not displayed, assuming failure")
                                         imageLabel.Image = ""
                                         imageLabel.Visible = false
@@ -816,9 +812,9 @@ function Gghiza07UI:CreateWindow(config)
                                 end
 
                                 local loaded = pcall(function()
-                                    return ContentProvider:PreloadAsync({assetId})
+                                    return ContentProvider:PreloadAsync({thumbId})
                                 end)
-                                if imageLabel.Image == assetId and (imageLabel.ImageTransparency == 0 or loaded) then
+                                if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
                                     debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
@@ -828,7 +824,7 @@ function Gghiza07UI:CreateWindow(config)
                             end)
                         else
                             warn("Failed to preload image after", retries, "attempts, trying direct load")
-                            imageLabel.Image = assetId
+                            imageLabel.Image = thumbId -- ใช้ rbxthumb:// โดยตรง
                             videoFrame.Visible = false
                             imageLabel.Visible = true
                             imageLabel.ZIndex = 5
@@ -842,7 +838,7 @@ function Gghiza07UI:CreateWindow(config)
                                 elapsed = elapsed + deltaTime
                                 if elapsed >= timeout then
                                     connection:Disconnect()
-                                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
+                                    if imageLabel.Image == thumbId and imageLabel.ImageTransparency == 1 then
                                         debugPrint("Image failed to load (transparency still 1)")
                                         imageLabel.Image = ""
                                         imageLabel.Visible = false
@@ -854,9 +850,9 @@ function Gghiza07UI:CreateWindow(config)
                                 end
 
                                 local loaded = pcall(function()
-                                    return ContentProvider:PreloadAsync({assetId})
+                                    return ContentProvider:PreloadAsync({thumbId})
                                 end)
-                                if imageLabel.Image == assetId and (imageLabel.ImageTransparency == 0 or loaded) then
+                                if imageLabel.Image == thumbId and (imageLabel.ImageTransparency == 0 or loaded) then
                                     debugPrint("Image confirmed displayed")
                                     connection:Disconnect()
                                     mainFrame.BackgroundTransparency = 1
@@ -1023,17 +1019,9 @@ function Gghiza07UI:CreateWindow(config)
         local bgImage = loadData(BACKGROUND_FILE, "")
         if bgImage and bgImage ~= "" then
             debugPrint("Loading saved background image:", bgImage)
-            -- ตรวจสอบว่า bgImage เป็น rbxthumb:// และดึง ID เพื่อแปลงเป็น rbxassetid://
-            local assetId
+            -- ตรวจสอบว่า bgImage เป็น rbxthumb://
             if bgImage:match("^rbxthumb://type=Asset&id=%d+&w=%d+&h=%d+$") then
-                local id = bgImage:match("id=(%d+)")
-                if id then
-                    assetId = "rbxassetid://" .. id
-                    debugPrint("Converted saved rbxthumb:// to rbxassetid:// for loading:", assetId)
-                else
-                    debugPrint("Failed to extract ID from saved rbxthumb:// format")
-                    return
-                end
+                debugPrint("Saved image is in rbxthumb:// format, loading directly:", bgImage)
             else
                 debugPrint("Saved background image is not in rbxthumb:// format, skipping")
                 return
@@ -1043,7 +1031,7 @@ function Gghiza07UI:CreateWindow(config)
             local success = false
             for i = 1, retries do
                 local attempt, err = pcall(function()
-                    ContentProvider:PreloadAsync({assetId})
+                    ContentProvider:PreloadAsync({bgImage})
                 end)
                 if attempt then
                     success = true
@@ -1056,7 +1044,7 @@ function Gghiza07UI:CreateWindow(config)
 
             if success then
                 debugPrint("Saved image preloaded successfully")
-                imageLabel.Image = assetId
+                imageLabel.Image = bgImage -- ใช้ rbxthumb:// โดยตรง
                 imageLabel.Visible = true
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
@@ -1070,7 +1058,7 @@ function Gghiza07UI:CreateWindow(config)
                     if elapsed >= timeout then
                         connection:Disconnect()
                         debugPrint("Saved image load timeout")
-                        if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
+                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
                             debugPrint("Saved image still set but not displayed, assuming failure")
                             imageLabel.Image = ""
                             imageLabel.Visible = false
@@ -1080,7 +1068,7 @@ function Gghiza07UI:CreateWindow(config)
                         return
                     end
 
-                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 0 then
+                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
                         debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
@@ -1088,7 +1076,7 @@ function Gghiza07UI:CreateWindow(config)
                 end)
             else
                 debugPrint("Failed to preload saved image after retries, trying direct load")
-                imageLabel.Image = assetId
+                imageLabel.Image = bgImage -- ใช้ rbxthumb:// โดยตรง
                 imageLabel.Visible = true
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
@@ -1101,7 +1089,7 @@ function Gghiza07UI:CreateWindow(config)
                     elapsed = elapsed + deltaTime
                     if elapsed >= timeout then
                         connection:Disconnect()
-                        if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
+                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
                             debugPrint("Saved image failed to load (transparency still 1)")
                             imageLabel.Image = ""
                             imageLabel.Visible = false
@@ -1110,7 +1098,7 @@ function Gghiza07UI:CreateWindow(config)
                         end
                         return
                     end
-                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 0 then
+                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
                         debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
