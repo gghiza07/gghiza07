@@ -760,124 +760,117 @@ function Gghiza07UI:CreateWindow(config)
             })
             
             bgTab:AddInput({
-                Name = "Image ID (rbxthumb://type=Asset&id=<ID>&w=<width>&h=<height>)",
+                Name = "Image ID (Number only, e.g., 5191098772)",
                 Callback = function(value)
-                    -- ตรวจสอบและแปลงรูปแบบ Image ID
-                    local imageId
-                    if value:match("^rbxthumb://type=Asset&id=%d+&w=%d+&h=%d+$") then
-                        -- ดึง ID จาก rbxthumb://
-                        local id = value:match("id=(%d+)")
-                        if id then
-                            imageId = "rbxassetid://" .. id
-                            debugPrint("Converted rbxthumb:// to rbxassetid://", imageId)
+                    -- ตรวจสอบว่าเป็นตัวเลขเท่านั้น
+                    if value:match("^%d+$") then
+                        -- แปลงตัวเลขให้เป็น rbxthumb://type=Asset&id=<Id>&w=420&h=420
+                        local thumbId = string.format("rbxthumb://type=Asset&id=%s&w=420&h=420", value)
+                        debugPrint("Converted to rbxthumb:// format:", thumbId)
+
+                        -- ดึง ID เพื่อแปลงเป็น rbxassetid:// สำหรับโหลดภาพ
+                        local assetId = "rbxassetid://" .. value
+                        debugPrint("Loading image with rbxassetid:// format:", assetId)
+
+                        local retries = 3
+                        local success = false
+                        for i = 1, retries do
+                            local attempt, err = pcall(function()
+                                ContentProvider:PreloadAsync({assetId})
+                            end)
+                            if attempt then
+                                success = true
+                                break
+                            else
+                                debugPrint("Retry", i, "failed to preload image:", err)
+                                task.wait(1)
+                            end
+                        end
+
+                        if success then
+                            debugPrint("Image preloaded successfully after retries")
+                            imageLabel.Image = assetId
+                            videoFrame.Visible = false
+                            imageLabel.Visible = true
+                            imageLabel.ZIndex = 5
+                            imageLabel.ImageTransparency = 0
+                            mainFrame.BackgroundTransparency = 1
+
+                            local timeout = 20
+                            local elapsed = 0
+                            local connection
+                            connection = RunService.Heartbeat:Connect(function(deltaTime)
+                                elapsed = elapsed + deltaTime
+                                if elapsed >= timeout then
+                                    connection:Disconnect()
+                                    debugPrint("Image load timeout")
+                                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
+                                        debugPrint("Image still set but not displayed, assuming failure")
+                                        imageLabel.Image = ""
+                                        imageLabel.Visible = false
+                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                                        warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
+                                    end
+                                    return
+                                end
+
+                                local loaded = pcall(function()
+                                    return ContentProvider:PreloadAsync({assetId})
+                                end)
+                                if imageLabel.Image == assetId and (imageLabel.ImageTransparency == 0 or loaded) then
+                                    debugPrint("Image confirmed displayed")
+                                    connection:Disconnect()
+                                    mainFrame.BackgroundTransparency = 1
+                                    -- เก็บในรูปแบบ rbxthumb://
+                                    saveData(BACKGROUND_FILE, thumbId)
+                                end
+                            end)
                         else
-                            warn("Failed to extract ID from rbxthumb:// format.")
-                            imageLabel.Image = ""
-                            imageLabel.Visible = false
-                            mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                            mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                            return
+                            warn("Failed to preload image after", retries, "attempts, trying direct load")
+                            imageLabel.Image = assetId
+                            videoFrame.Visible = false
+                            imageLabel.Visible = true
+                            imageLabel.ZIndex = 5
+                            imageLabel.ImageTransparency = 0
+                            mainFrame.BackgroundTransparency = 1
+
+                            local timeout = 20
+                            local elapsed = 0
+                            local connection
+                            connection = RunService.Heartbeat:Connect(function(deltaTime)
+                                elapsed = elapsed + deltaTime
+                                if elapsed >= timeout then
+                                    connection:Disconnect()
+                                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
+                                        debugPrint("Image failed to load (transparency still 1)")
+                                        imageLabel.Image = ""
+                                        imageLabel.Visible = false
+                                        mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
+                                        mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                                        warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
+                                    end
+                                    return
+                                end
+
+                                local loaded = pcall(function()
+                                    return ContentProvider:PreloadAsync({assetId})
+                                end)
+                                if imageLabel.Image == assetId and (imageLabel.ImageTransparency == 0 or loaded) then
+                                    debugPrint("Image confirmed displayed")
+                                    connection:Disconnect()
+                                    mainFrame.BackgroundTransparency = 1
+                                    -- เก็บในรูปแบบ rbxthumb://
+                                    saveData(BACKGROUND_FILE, thumbId)
+                                end
+                            end)
                         end
                     else
-                        warn("Invalid Image ID format. Use rbxthumb://type=Asset&id=<ID>&w=<width>&h=<height> (e.g., rbxthumb://type=Asset&id=5191098772&w=420&h=420)")
+                        warn("Invalid Image ID format. Use a number only (e.g., 5191098772)")
                         imageLabel.Image = ""
                         imageLabel.Visible = false
                         mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
                         mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        return
-                    end
-
-                    debugPrint("Attempting to load image:", imageId)
-                    local retries = 3
-                    local success = false
-                    for i = 1, retries do
-                        local attempt, err = pcall(function()
-                            ContentProvider:PreloadAsync({imageId})
-                        end)
-                        if attempt then
-                            success = true
-                            break
-                        else
-                            debugPrint("Retry", i, "failed to preload image:", err)
-                            task.wait(1)
-                        end
-                    end
-
-                    if success then
-                        debugPrint("Image preloaded successfully after retries")
-                        imageLabel.Image = imageId
-                        videoFrame.Visible = false
-                        imageLabel.Visible = true
-                        imageLabel.ZIndex = 5
-                        imageLabel.ImageTransparency = 0
-                        mainFrame.BackgroundTransparency = 1
-
-                        local timeout = 20
-                        local elapsed = 0
-                        local connection
-                        connection = RunService.Heartbeat:Connect(function(deltaTime)
-                            elapsed = elapsed + deltaTime
-                            if elapsed >= timeout then
-                                connection:Disconnect()
-                                debugPrint("Image load timeout")
-                                if imageLabel.Image == imageId and imageLabel.ImageTransparency == 1 then
-                                    debugPrint("Image still set but not displayed, assuming failure")
-                                    imageLabel.Image = ""
-                                    imageLabel.Visible = false
-                                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                    warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
-                                end
-                                return
-                            end
-
-                            local loaded = pcall(function()
-                                return ContentProvider:PreloadAsync({imageId})
-                            end)
-                            if imageLabel.Image == imageId and (imageLabel.ImageTransparency == 0 or loaded) then
-                                debugPrint("Image confirmed displayed")
-                                connection:Disconnect()
-                                mainFrame.BackgroundTransparency = 1
-                                saveData(BACKGROUND_FILE, imageId)
-                            end
-                        end)
-                    else
-                        warn("Failed to preload image after", retries, "attempts, trying direct load")
-                        imageLabel.Image = imageId
-                        videoFrame.Visible = false
-                        imageLabel.Visible = true
-                        imageLabel.ZIndex = 5
-                        imageLabel.ImageTransparency = 0
-                        mainFrame.BackgroundTransparency = 1
-
-                        local timeout = 20
-                        local elapsed = 0
-                        local connection
-                        connection = RunService.Heartbeat:Connect(function(deltaTime)
-                            elapsed = elapsed + deltaTime
-                            if elapsed >= timeout then
-                                connection:Disconnect()
-                                if imageLabel.Image == imageId and imageLabel.ImageTransparency == 1 then
-                                    debugPrint("Image failed to load (transparency still 1)")
-                                    imageLabel.Image = ""
-                                    imageLabel.Visible = false
-                                    mainFrame.BackgroundTransparency = math.min(theme.Transparency, 0.8)
-                                    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                                    warn("Image failed to load after timeout. Check if the Image ID is valid or accessible.")
-                                end
-                                return
-                            end
-
-                            local loaded = pcall(function()
-                                return ContentProvider:PreloadAsync({imageId})
-                            end)
-                            if imageLabel.Image == imageId and (imageLabel.ImageTransparency == 0 or loaded) then
-                                debugPrint("Image confirmed displayed")
-                                connection:Disconnect()
-                                mainFrame.BackgroundTransparency = 1
-                                saveData(BACKGROUND_FILE, imageId)
-                            end
-                        end)
                     end
                 end
             })
@@ -1030,11 +1023,27 @@ function Gghiza07UI:CreateWindow(config)
         local bgImage = loadData(BACKGROUND_FILE, "")
         if bgImage and bgImage ~= "" then
             debugPrint("Loading saved background image:", bgImage)
+            -- ตรวจสอบว่า bgImage เป็น rbxthumb:// และดึง ID เพื่อแปลงเป็น rbxassetid://
+            local assetId
+            if bgImage:match("^rbxthumb://type=Asset&id=%d+&w=%d+&h=%d+$") then
+                local id = bgImage:match("id=(%d+)")
+                if id then
+                    assetId = "rbxassetid://" .. id
+                    debugPrint("Converted saved rbxthumb:// to rbxassetid:// for loading:", assetId)
+                else
+                    debugPrint("Failed to extract ID from saved rbxthumb:// format")
+                    return
+                end
+            else
+                debugPrint("Saved background image is not in rbxthumb:// format, skipping")
+                return
+            end
+
             local retries = 3
             local success = false
             for i = 1, retries do
                 local attempt, err = pcall(function()
-                    ContentProvider:PreloadAsync({bgImage})
+                    ContentProvider:PreloadAsync({assetId})
                 end)
                 if attempt then
                     success = true
@@ -1044,9 +1053,10 @@ function Gghiza07UI:CreateWindow(config)
                     task.wait(1)
                 end
             end
+
             if success then
                 debugPrint("Saved image preloaded successfully")
-                imageLabel.Image = bgImage
+                imageLabel.Image = assetId
                 imageLabel.Visible = true
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
@@ -1060,7 +1070,7 @@ function Gghiza07UI:CreateWindow(config)
                     if elapsed >= timeout then
                         connection:Disconnect()
                         debugPrint("Saved image load timeout")
-                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
+                        if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
                             debugPrint("Saved image still set but not displayed, assuming failure")
                             imageLabel.Image = ""
                             imageLabel.Visible = false
@@ -1070,7 +1080,7 @@ function Gghiza07UI:CreateWindow(config)
                         return
                     end
 
-                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
+                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 0 then
                         debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
@@ -1078,7 +1088,7 @@ function Gghiza07UI:CreateWindow(config)
                 end)
             else
                 debugPrint("Failed to preload saved image after retries, trying direct load")
-                imageLabel.Image = bgImage
+                imageLabel.Image = assetId
                 imageLabel.Visible = true
                 imageLabel.ZIndex = 5
                 mainFrame.BackgroundTransparency = 1
@@ -1091,7 +1101,7 @@ function Gghiza07UI:CreateWindow(config)
                     elapsed = elapsed + deltaTime
                     if elapsed >= timeout then
                         connection:Disconnect()
-                        if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 1 then
+                        if imageLabel.Image == assetId and imageLabel.ImageTransparency == 1 then
                             debugPrint("Saved image failed to load (transparency still 1)")
                             imageLabel.Image = ""
                             imageLabel.Visible = false
@@ -1100,7 +1110,7 @@ function Gghiza07UI:CreateWindow(config)
                         end
                         return
                     end
-                    if imageLabel.Image == bgImage and imageLabel.ImageTransparency == 0 then
+                    if imageLabel.Image == assetId and imageLabel.ImageTransparency == 0 then
                         debugPrint("Saved image confirmed displayed")
                         connection:Disconnect()
                         mainFrame.BackgroundTransparency = 1
