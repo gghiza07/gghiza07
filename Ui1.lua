@@ -9,7 +9,7 @@ local SoundService = game:GetService("SoundService")
 local VERSION = "V0.1"
 local LOCKED = false
 local DEBUG_MODE = false
-local NOTIFICATIONS_ENABLED = true -- เปิดการแจ้งเตือนเป็นค่าเริ่มต้น
+local NOTIFICATIONS_ENABLED = false -- ปิดการแจ้งเตือนตามคำขอ
 
 local function debugPrint(...)
     if DEBUG_MODE then
@@ -47,6 +47,7 @@ function Gghiza07UI:CreateWindow(config)
     local window = {}
     debugPrint("Creating window:", config.Name, "Version:", VERSION)
 
+    -- ใช้ FileFolder จาก config หากกำหนดมา มิฉะนั้นใช้ชื่อโฟลเดอร์เริ่มต้น
     local FOLDER_NAME = config.FileFolder or "Gghiza07UI"
     local SETTINGS_FOLDER = FOLDER_NAME .. "/" .. (config.Name or "DefaultUI")
     local SETTINGS_FILE = SETTINGS_FOLDER .. "/settings.json"
@@ -60,8 +61,7 @@ function Gghiza07UI:CreateWindow(config)
     local elementStates = {
         Toggles = {},
         Inputs = {},
-        Dropdowns = {},
-        NotificationsEnabled = true -- เพิ่มฟิลด์สำหรับเก็บสถานะการแจ้งเตือน
+        Dropdowns = {}
     }
 
     local defaultTheme = {
@@ -136,18 +136,14 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    local loadedElementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, Dropdowns = {}, NotificationsEnabled = true})
+    local loadedElementStates = loadData(ELEMENTS_FILE, {Toggles = {}, Inputs = {}, Dropdowns = {}})
     if type(loadedElementStates) == "table" then
         elementStates.Toggles = loadedElementStates.Toggles or {}
         elementStates.Inputs = loadedElementStates.Inputs or {}
         elementStates.Dropdowns = loadedElementStates.Dropdowns or {}
-        elementStates.NotificationsEnabled = loadedElementStates.NotificationsEnabled ~= nil and loadedElementStates.NotificationsEnabled or true
-        NOTIFICATIONS_ENABLED = elementStates.NotificationsEnabled -- โหลดสถานะการแจ้งเตือน
-        debugPrint("Loaded NotificationsEnabled state:", NOTIFICATIONS_ENABLED)
     else
         debugPrint("Loaded element states is not a table, resetting to default")
-        elementStates = {Toggles = {}, Inputs = {}, Dropdowns = {}, NotificationsEnabled = true}
-        NOTIFICATIONS_ENABLED = true
+        elementStates = {Toggles = {}, Inputs = {}, Dropdowns = {}}
     end
 
     local loadedTheme = loadData(THEME_FILE, defaultTheme)
@@ -288,7 +284,7 @@ function Gghiza07UI:CreateWindow(config)
 
     local imageLabel = Instance.new("ImageLabel")
     imageLabel.Name = "ImageLabel"
-    imageLabel.Size = UDim2.new(1, 0, 1 SAVING, 0)
+    imageLabel.Size = UDim2.new(1, 0, 1, 0)
     imageLabel.Position = UDim2.new(0, 0, 0, 0)
     imageLabel.BackgroundTransparency = 1
     imageLabel.ZIndex = 2
@@ -678,13 +674,13 @@ function Gghiza07UI:CreateWindow(config)
 
             local button = Instance.new("TextButton")
             button.Name = buttonConfig.Name or "Button"
-            button.Size = UDim2.new(1, -10, 0, 50)
+            button.Size = UDim2.new(1, -10, 0, 50) -- ปรับขนาดให้ใหญ่ขึ้น
             button.BackgroundColor3 = theme.AccentColor
             button.Text = buttonConfig.Name or "Button"
             button.TextColor3 = theme.TextColor
-            button.TextSize = 18
-            button.TextScaled = false
-            button.TextTruncate = Enum.TextTruncate.AtEnd
+            button.TextSize = 18 -- กำหนดขนาดตัวอักษร
+            button.TextScaled = false -- ปิด TextScaled เพื่อควบคุมขนาด
+            button.TextTruncate = Enum.TextTruncate.AtEnd -- ตัดข้อความยาวเกิน
             button.ZIndex = 11
             button.LayoutOrder = #tabContent:GetChildren()
             button.Active = true
@@ -918,9 +914,9 @@ function Gghiza07UI:CreateWindow(config)
             dropdownButton.BackgroundColor3 = theme.AccentColor
             dropdownButton.Text = dropdownConfig.Name or "Select Option"
             dropdownButton.TextColor3 = theme.TextColor
-            dropdownButton.TextSize = 16
-            dropdownButton.TextScaled = false
-            dropdownButton.TextTruncate = Enum.TextTruncate.AtEnd
+            dropdownButton.TextSize = 16 -- ปรับขนาดตัวอักษร
+            dropdownButton.TextScaled = false -- ปิด TextScaled
+            dropdownButton.TextTruncate = Enum.TextTruncate.AtEnd -- ตัดข้อความยาวเกิน
             dropdownButton.ZIndex = 11
             dropdownButton.Active = true
             dropdownButton.AutoButtonColor = true
@@ -996,9 +992,9 @@ function Gghiza07UI:CreateWindow(config)
                 optionLabel.BackgroundTransparency = 1
                 optionLabel.Text = tostring(option)
                 optionLabel.TextColor3 = theme.TextColor
-                optionLabel.TextSize = 14
-                optionLabel.TextScaled = false
-                optionLabel.TextTruncate = Enum.TextTruncate.AtEnd
+                optionLabel.TextSize = 14 -- ปรับขนาดตัวอักษร
+                optionLabel.TextScaled = false -- ปิด TextScaled
+                optionLabel.TextTruncate = Enum.TextTruncate.AtEnd -- ตัดข้อความยาวเกิน
                 optionLabel.TextXAlignment = Enum.TextXAlignment.Left
                 optionLabel.ZIndex = 14
                 optionLabel.Active = true
@@ -1153,19 +1149,6 @@ function Gghiza07UI:CreateWindow(config)
         function tab:AddBackgroundOptions()
             local bgTab = self
             
-            -- เพิ่ม Toggle สำหรับเปิด/ปิดการแจ้งเตือน
-            bgTab:AddToggle({
-                Name = "Enable Notifications",
-                Default = elementStates.NotificationsEnabled,
-                Callback = function(state)
-                    NOTIFICATIONS_ENABLED = state
-                    Gghiza07UI:SetNotifications(state)
-                    elementStates.NotificationsEnabled = state
-                    saveData(ELEMENTS_FILE, elementStates)
-                    debugPrint("NotificationsEnabled set to:", state)
-                end
-            })
-
             bgTab:AddInput({
                 Name = "Background Color (R,G,B)",
                 Default = "30,30,30",
@@ -1467,9 +1450,6 @@ function Gghiza07UI:CreateWindow(config)
                         elementStates.Toggles = {}
                         elementStates.Inputs = {}
                         elementStates.Dropdowns = {}
-                        elementStates.NotificationsEnabled = true
-                        NOTIFICATIONS_ENABLED = true
-                        Gghiza07UI:SetNotifications(true)
                         buttonClickSound.SoundId = ""
                         saveData(ELEMENTS_FILE, elementStates)
                         saveData(SOUND_FILE, {SoundId = ""})
