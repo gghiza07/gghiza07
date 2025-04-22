@@ -8,9 +8,9 @@ local SoundService = game:GetService("SoundService")
 
 local VERSION = "V0.1"
 local LOCKED = false
-local DEBUG_MODE = true -- เปิด Debug Mode เพื่อตรวจสอบปัญหา
+local DEBUG_MODE = true
 local NOTIFICATIONS_ENABLED = false
-local NOTIFICATION_POSITION = "TopRight" -- ค่าเริ่มต้นของตำแหน่ง Notification
+local NOTIFICATION_POSITION = "TopRight"
 
 local function debugPrint(...)
     if DEBUG_MODE then
@@ -139,8 +139,12 @@ function Gghiza07UI:CreateWindow(config)
         return default
     end
 
-    -- โหลดสถานะ Notification และตำแหน่งจาก settings.json
-    local loadedSettings = loadData(SETTINGS_FILE, {NotificationsEnabled = false, NotificationPosition = "TopRight"})
+    -- โหลดการตั้งค่า Notification, ตำแหน่ง, และขนาด UI
+    local loadedSettings = loadData(SETTINGS_FILE, {
+        NotificationsEnabled = false,
+        NotificationPosition = "TopRight",
+        UISize = {WidthScale = 0.8, HeightScale = 0.8}
+    })
     NOTIFICATIONS_ENABLED = loadedSettings.NotificationsEnabled or false
     NOTIFICATION_POSITION = loadedSettings.NotificationPosition or "TopRight"
 
@@ -276,7 +280,12 @@ function Gghiza07UI:CreateWindow(config)
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0.8, 0, 0.8, 0)
+    mainFrame.Size = UDim2.new(
+        loadedSettings.UISize and loadedSettings.UISize.WidthScale or 0.8,
+        0,
+        loadedSettings.UISize and loadedSettings.UISize.HeightScale or 0.8,
+        0
+    )
     mainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
     mainFrame.BackgroundColor3 = theme.BackgroundColor
     mainFrame.BackgroundTransparency = theme.Transparency
@@ -289,6 +298,22 @@ function Gghiza07UI:CreateWindow(config)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, theme.CornerRadius)
     corner.Parent = mainFrame
+
+    -- เพิ่มปุ่ม Resize
+    local resizeButton = Instance.new("TextButton")
+    resizeButton.Name = "ResizeButton"
+    resizeButton.Size = UDim2.new(0, 20, 0, 20)
+    resizeButton.Position = UDim2.new(1, -20, 1, -20)
+    resizeButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    resizeButton.Text = "↔"
+    resizeButton.TextColor3 = theme.TextColor
+    resizeButton.TextScaled = true
+    resizeButton.ZIndex = 12
+    resizeButton.Parent = mainFrame
+
+    local resizeCorner = Instance.new("UICorner")
+    resizeCorner.CornerRadius = UDim.new(0, 5)
+    resizeCorner.Parent = resizeButton
 
     local imageLabel = Instance.new("ImageLabel")
     imageLabel.Name = "ImageLabel"
@@ -337,6 +362,40 @@ function Gghiza07UI:CreateWindow(config)
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
+        end
+    end)
+
+    -- การจัดการการ Resize
+    local resizing, resizeStart, startSize
+    resizeButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.Size
+        end
+    end)
+
+    resizeButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+            -- บันทึกขนาด UI
+            saveData(SETTINGS_FILE, {
+                NotificationsEnabled = NOTIFICATIONS_ENABLED,
+                NotificationPosition = NOTIFICATION_POSITION,
+                UISize = {
+                    WidthScale = mainFrame.Size.X.Scale,
+                    HeightScale = mainFrame.Size.Y.Scale
+                }
+            })
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            local newWidth = math.clamp(startSize.X.Scale + delta.X / 1000, 0.4, 1.0) -- ขนาดขั้นต่ำ 0.4, สูงสุด 1.0
+            local newHeight = math.clamp(startSize.Y.Scale + delta.Y / 1000, 0.4, 1.0)
+            mainFrame.Size = UDim2.new(newWidth, 0, newHeight, 0)
         end
     end)
 
@@ -399,9 +458,9 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local notifications = {}
-    local NOTIFICATION_HEIGHT = 40 -- ลดความสูงของ Notification
-    local NOTIFICATION_WIDTH = 150 -- ลดความกว้างของ Notification
-    local NOTIFICATION_SPACING = 8 -- ลดระยะห่างระหว่าง Notification
+    local NOTIFICATION_HEIGHT = 40
+    local NOTIFICATION_WIDTH = 150
+    local NOTIFICATION_SPACING = 8
     local NOTIFICATION_DURATION = 2
 
     local function updateNotificationPositions()
@@ -443,7 +502,6 @@ function Gghiza07UI:CreateWindow(config)
         notificationFrame.ZIndex = 1002
         notificationFrame.Parent = screenGui
 
-        -- ตั้งตำแหน่งเริ่มต้นตาม NOTIFICATION_POSITION
         local startX, startY, anchorX, anchorY
         if NOTIFICATION_POSITION == "TopLeft" then
             startX = 10
@@ -678,6 +736,7 @@ function Gghiza07UI:CreateWindow(config)
         tabContent.ScrollBarThickness = 5
         tabContent.ZIndex = 10
         tabContent.Active = true
+        tabContent.ClipsDescendants = true
         tabContent.Parent = tabContents
 
         local uiListLayout = Instance.new("UIListLayout")
@@ -810,7 +869,6 @@ function Gghiza07UI:CreateWindow(config)
             cornerToggle.CornerRadius = UDim.new(0, 5)
             cornerToggle.Parent = toggleButton
 
-            -- เรียก Callback เมื่อโหลดสถานะ
             if toggleConfig.Callback then
                 local success, err = pcall(function()
                     toggleConfig.Callback(toggleState)
@@ -990,6 +1048,7 @@ function Gghiza07UI:CreateWindow(config)
             dropdownList.Visible = false
             dropdownList.ZIndex = 12
             dropdownList.Active = true
+            dropdownList.ClipsDescendants = true
             dropdownList.Parent = dropdownFrame
 
             local listLayout = Instance.new("UIListLayout")
@@ -1007,7 +1066,6 @@ function Gghiza07UI:CreateWindow(config)
                 dropdownButton.Text = dropdownConfig.Default
             end
 
-            -- เรียก Callback เมื่อโหลดสถานะ
             if dropdownConfig.Callback and #selectedOptions > 0 then
                 local success, err = pcall(function()
                     dropdownConfig.Callback(isMulti and selectedOptions or selectedOptions[1])
@@ -1213,6 +1271,44 @@ function Gghiza07UI:CreateWindow(config)
         function tab:AddBackgroundOptions()
             local bgTab = self
             
+            -- เพิ่ม Toggle และ Dropdown สำหรับ Notification ก่อน
+            bgTab:AddToggle({
+                Name = "Enable Notifications",
+                Default = NOTIFICATIONS_ENABLED,
+                Callback = function(state)
+                    NOTIFICATIONS_ENABLED = state
+                    saveData(SETTINGS_FILE, {
+                        NotificationsEnabled = NOTIFICATIONS_ENABLED,
+                        NotificationPosition = NOTIFICATION_POSITION,
+                        UISize = {
+                            WidthScale = mainFrame.Size.X.Scale,
+                            HeightScale = mainFrame.Size.Y.Scale
+                        }
+                    })
+                    debugPrint("Notifications set to:", state and "Enabled" or "Disabled")
+                end
+            })
+
+            bgTab:AddDropdown({
+                Name = "Notification Position",
+                Options = {"TopLeft", "TopRight", "BottomLeft", "BottomRight"},
+                Default = NOTIFICATION_POSITION,
+                Multi = false,
+                Callback = function(position)
+                    NOTIFICATION_POSITION = position
+                    saveData(SETTINGS_FILE, {
+                        NotificationsEnabled = NOTIFICATIONS_ENABLED,
+                        NotificationPosition = NOTIFICATION_POSITION,
+                        UISize = {
+                            WidthScale = mainFrame.Size.X.Scale,
+                            HeightScale = mainFrame.Size.Y.Scale
+                        }
+                    })
+                    updateNotificationPositions()
+                    debugPrint("Notification position set to:", position)
+                end
+            })
+
             bgTab:AddInput({
                 Name = "Background Color (R,G,B)",
                 Default = "30,30,30",
@@ -1432,7 +1528,7 @@ function Gghiza07UI:CreateWindow(config)
                     if not success then
                         warn("Failed to reset theme:", err)
                     end
-                end
+                }
             })
 
             bgTab:AddButton({
@@ -1461,38 +1557,7 @@ function Gghiza07UI:CreateWindow(config)
                     else
                         warn("Failed to reset settings:", err)
                     end
-                end
-            })
-
-            -- เพิ่ม Toggle สำหรับเปิด/ปิด Notification
-            bgTab:AddToggle({
-                Name = "Enable Notifications",
-                Default = NOTIFICATIONS_ENABLED,
-                Callback = function(state)
-                    NOTIFICATIONS_ENABLED = state
-                    saveData(SETTINGS_FILE, {
-                        NotificationsEnabled = NOTIFICATIONS_ENABLED,
-                        NotificationPosition = NOTIFICATION_POSITION
-                    })
-                    debugPrint("Notifications set to:", state and "Enabled" or "Disabled")
-                end
-            })
-
-            -- เพิ่ม Dropdown สำหรับเลือกตำแหน่ง Notification
-            bgTab:AddDropdown({
-                Name = "Notification Position",
-                Options = {"TopLeft", "TopRight", "BottomLeft", "BottomRight"},
-                Default = NOTIFICATION_POSITION,
-                Multi = false,
-                Callback = function(position)
-                    NOTIFICATION_POSITION = position
-                    saveData(SETTINGS_FILE, {
-                        NotificationsEnabled = NOTIFICATIONS_ENABLED,
-                        NotificationPosition = NOTIFICATION_POSITION
-                    })
-                    updateNotificationPositions()
-                    debugPrint("Notification position set to:", position)
-                end
+                }
             })
 
             if config.Discord and config.Discord.Invite then
@@ -1507,7 +1572,7 @@ function Gghiza07UI:CreateWindow(config)
                         else
                             warn("Failed to copy Discord invite:", err)
                         end
-                    end
+                    }
                 })
             end
 
