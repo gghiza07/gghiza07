@@ -298,6 +298,22 @@ function Gghiza07UI:CreateWindow(config)
     corner.CornerRadius = UDim.new(0, theme.CornerRadius)
     corner.Parent = mainFrame
 
+    -- Resize Handle
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.new(0, 20, 0, 20)
+    resizeHandle.Position = UDim2.new(1, -20, 1, -20)
+    resizeHandle.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    resizeHandle.Text = "↘"
+    resizeHandle.TextColor3 = theme.TextColor
+    resizeHandle.TextScaled = true
+    resizeHandle.ZIndex = 12
+    resizeHandle.Parent = mainFrame
+
+    local resizeCorner = Instance.new("UICorner")
+    resizeCorner.CornerRadius = UDim.new(0, 5)
+    resizeCorner.Parent = resizeHandle
+
     local dragHandle = Instance.new("Frame")
     dragHandle.Name = "DragHandle"
     dragHandle.Size = UDim2.new(1, 0, 0, 40)
@@ -387,6 +403,33 @@ function Gghiza07UI:CreateWindow(config)
         end
     end)
 
+    -- Resize functionality
+    local resizing, resizeStart, startSize
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.Size
+        end
+    end)
+
+    resizeHandle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            local newScaleX = startSize.X.Scale + (delta.X / screenGui.AbsoluteSize.X)
+            local newScaleY = startSize.Y.Scale + (delta.Y / screenGui.AbsoluteSize.Y)
+            newScaleX = math.clamp(newScaleX, 0.3, 0.9) -- Limit resize bounds
+            newScaleY = math.clamp(newScaleY, 0.3, 0.9)
+            mainFrame.Size = UDim2.new(newScaleX, 0, newScaleY, 0)
+        end
+    end)
+
     local tabFrame = Instance.new("Frame")
     tabFrame.Name = "TabFrame"
     tabFrame.Size = UDim2.new(0.25, 0, 1, -50)
@@ -421,14 +464,12 @@ function Gghiza07UI:CreateWindow(config)
     tabContents.Active = true
     tabContents.Parent = mainFrame
 
-    local toggleButton = Instance.new("TextButton")
+    local toggleButton = Instance.new("ImageButton")
     toggleButton.Name = "ToggleButton"
     toggleButton.Size = UDim2.new(0, 60, 0, 60)
     toggleButton.Position = UDim2.new(0, 10, 1, -70)
     toggleButton.BackgroundColor3 = theme.AccentColor
-    toggleButton.TextColor3 = theme.TextColor
-    toggleButton.Text = "ON"
-    toggleButton.TextScaled = true
+    toggleButton.Image = (config.Iconconfig and config.Iconconfig.Image) or ""
     toggleButton.ZIndex = 1001
     toggleButton.Active = true
     toggleButton.AutoButtonColor = true
@@ -451,15 +492,16 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local notifications = {}
-    local NOTIFICATION_HEIGHT = 40
+    local NOTIFICATION_HEIGHT = 30  -- Reduced size
     local NOTIFICATION_SPACING = 5
     local NOTIFICATION_DURATION = 2
 
     local function updateNotificationPositions()
         for i, notif in ipairs(notifications) do
-            local targetY = 1 - (i * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING) / screenGui.AbsoluteSize.Y)
+            local targetY = (mainFrame.Position.Y.Scale * screenGui.AbsoluteSize.Y) + (mainFrame.Size.Y.Scale * screenGui.AbsoluteSize.Y) - (i * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING))
+            local targetX = (mainFrame.Position.X.Scale * screenGui.AbsoluteSize.X) + (mainFrame.Size.X.Scale * screenGui.AbsoluteSize.X) - 160
             TweenService:Create(notif.Frame, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Position = UDim2.new(1, -210, targetY, -10)
+                Position = UDim2.new(0, targetX, 0, targetY)
             }):Play()
         end
     end
@@ -469,8 +511,9 @@ function Gghiza07UI:CreateWindow(config)
         if not (elementType == "Toggle" or elementType == "Button" or elementType == "Dropdown") then return end
 
         local notificationFrame = Instance.new("Frame")
-        notificationFrame.Size = UDim2.new(0, 200, 0, NOTIFICATION_HEIGHT)
-        notificationFrame.Position = UDim2.new(1, -210, 1, -10 - #notifications * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING))
+        notificationFrame.Size = UDim2.new(0, 150, 0, NOTIFICATION_HEIGHT)  -- Reduced size
+        notificationFrame.Position = UDim2.new(0, (mainFrame.Position.X.Scale * screenGui.AbsoluteSize.X) + (mainFrame.Size.X.Scale * screenGui.AbsoluteSize.X) - 160, 
+                                              0, (mainFrame.Position.Y.Scale * screenGui.AbsoluteSize.Y) + (mainFrame.Size.Y.Scale * screenGui.AbsoluteSize.Y) - (#notifications * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING)))
         notificationFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         notificationFrame.BackgroundTransparency = 0.2
         notificationFrame.ZIndex = 1002
@@ -486,7 +529,7 @@ function Gghiza07UI:CreateWindow(config)
         notifLabel.BackgroundTransparency = 1
         notifLabel.Text = message
         notifLabel.TextColor3 = theme.TextColor
-        notifLabel.TextSize = 14
+        notifLabel.TextSize = 12  -- Reduced text size
         notifLabel.TextXAlignment = Enum.TextXAlignment.Left
         notifLabel.ZIndex = 1003
         notifLabel.Parent = notificationFrame
@@ -502,7 +545,10 @@ function Gghiza07UI:CreateWindow(config)
         task.wait(NOTIFICATION_DURATION)
         fadeOut:Play()
         fadeOut.Completed:Connect(function()
-            table.remove(notifications, table.find(notifications, notif))
+            local index = table.find(notifications, notif)
+            if index then
+                table.remove(notifications, index)
+            end
             notificationFrame:Destroy()
             updateNotificationPositions()
         end)
@@ -523,7 +569,6 @@ function Gghiza07UI:CreateWindow(config)
             mainFrame.Position = UDim2.new(0.2, 0, -0.7, 0)
             local slideIn = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0.2, 0, 0.15, 0)})
             slideIn:Play()
-            toggleButton.Text = "ON"
             toggleButton.BackgroundColor3 = theme.AccentColor
         else
             local slideOut = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.2, 0, -0.7, 0)})
@@ -531,7 +576,6 @@ function Gghiza07UI:CreateWindow(config)
             slideOut.Completed:Connect(function()
                 mainFrame.Visible = false
             end)
-            toggleButton.Text = "OFF"
             toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         end
 
@@ -591,7 +635,7 @@ function Gghiza07UI:CreateWindow(config)
                 keyFrame.Visible = false
                 mainFrame.Visible = true
                 toggleButton.Visible = true
-                if toggleButton.Text == "ON" then
+                if toggleButton.BackgroundColor3 == theme.AccentColor then
                     mainFrame.Visible = true
                 else
                     mainFrame.Visible = false
@@ -1733,47 +1777,164 @@ function Gghiza07UI:CreateWindow(config)
         return tab
     end
 
-    function window:AddBackgroundOptions()
-        local tab = window:CreateTab("Settings")
+    function window:SetBackground(imageId)
+        if not imageId or type(imageId) ~= "string" then
+            warn("Invalid image ID for SetBackground. Expected a string.")
+            return
+        end
 
-        local section = tab:AddSection("Notification Settings")
-
-        section:AddToggle({
-            Name = "Enable Notifications",
-            Default = NOTIFICATIONS_ENABLED,
-            Callback = function(state)
-                NOTIFICATIONS_ENABLED = state
-                saveData(NOTIFICATION_FILE, {Enabled = state})
-                showNotification("Notifications " .. (state and "Enabled" or "Disabled"), "Toggle")
+        local success, err = pcall(function()
+            if saveSetting then
+                saveData(BACKGROUND_FILE, imageId)
             end
-        })
+            imageLabel.Image = "rbxassetid://" .. imageId
+            imageLabel.ImageTransparency = 0
+            videoFrame.Visible = false
+        end)
+        if not success then
+            debugPrint("Failed to set background image:", err)
+            warn("Failed to set background image. Ensure the image ID is valid.")
+        end
+    end
 
-        local sectionSound = tab:AddSection("Sound Settings")
+    local savedBackground = loadData(BACKGROUND_FILE, "")
+    if savedBackground and savedBackground ~= "" then
+        window:SetBackground(savedBackground)
+        debugPrint("Loaded saved background:", savedBackground)
+    end
 
-        sectionSound:AddInput({
-            Name = "Sound ID",
-            Default = "",
-            Callback = function(value)
-                local soundId = tostring(value)
-                if soundId and soundId ~= "" then
-                    if not soundId:match("^rbxassetid://") then
-                        soundId = "rbxassetid://" .. soundId
+    function window:SetVideoBackground(videoId)
+        if not videoId or type(videoId) ~= "string" then
+            warn("Invalid video ID for SetVideoBackground. Expected a string.")
+            return
+        end
+
+        local success, err = pcall(function()
+            if saveSetting then
+                saveData(VIDEO_FILE, videoId)
+            end
+            videoFrame.Video = "rbxassetid://" .. videoId
+            videoFrame.Visible = true
+            videoFrame:Play()
+            imageLabel.ImageTransparency = 1
+        end)
+        if not success then
+            debugPrint("Failed to set background video:", err)
+            warn("Failed to set background video. Ensure the video ID is valid.")
+        end
+    end
+
+    local savedVideo = loadData(VIDEO_FILE, "")
+    if savedVideo and savedVideo ~= "" then
+        window:SetVideoBackground(savedVideo)
+        debugPrint("Loaded saved video background:", savedVideo)
+    end
+
+    function window:SetTheme(newTheme)
+        if not newTheme or type(newTheme) ~= "table" then
+            warn("Invalid theme for SetTheme. Expected a table.")
+            return
+        end
+
+        local updatedTheme = {
+            BackgroundColor = newTheme.BackgroundColor and color3ToTable(newTheme.BackgroundColor) or color3ToTable(theme.BackgroundColor),
+            AccentColor = newTheme.AccentColor and color3ToTable(newTheme.AccentColor) or color3ToTable(theme.AccentColor),
+            TextColor = newTheme.TextColor and color3ToTable(newTheme.TextColor) or color3ToTable(theme.TextColor),
+            CornerRadius = newTheme.CornerRadius or theme.CornerRadius,
+            Transparency = newTheme.Transparency or theme.Transparency
+        }
+
+        theme.BackgroundColor = tableToColor3(updatedTheme.BackgroundColor)
+        theme.AccentColor = tableToColor3(updatedTheme.AccentColor)
+        theme.TextColor = tableToColor3(updatedTheme.TextColor)
+        theme.CornerRadius = updatedTheme.CornerRadius
+        theme.Transparency = updatedTheme.Transparency
+
+        saveData(THEME_FILE, updatedTheme)
+
+        mainFrame.BackgroundColor3 = theme.BackgroundColor
+        mainFrame.BackgroundTransparency = theme.Transparency
+        dragHandle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        dragHandle.BackgroundTransparency = 0.2
+        titleLabel.TextColor3 = theme.TextColor
+        closeButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+        for _, tabButton in ipairs(tabButtons:GetChildren()) do
+            if tabButton:IsA("TextButton") then
+                tabButton.BackgroundColor3 = tabButton.BackgroundColor3 == theme.AccentColor and theme.AccentColor or Color3.fromRGB(50, 50, 50)
+                tabButton.TextColor3 = theme.TextColor
+            end
+        end
+
+        local function updateElementColors(frame)
+            for _, child in ipairs(frame:GetDescendants()) do
+                if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                    if child.Name ~= "Title" and child.Name ~= "CloseButton" then
+                        child.TextColor3 = theme.TextColor
+                        if child:IsA("TextButton") and child.BackgroundColor3 ~= Color3.fromRGB(50, 50, 50) and child.BackgroundColor3 ~= Color3.fromRGB(100, 100, 100) then
+                            child.BackgroundColor3 = theme.AccentColor
+                        end
                     end
-                    buttonClickSound.SoundId = soundId
-                    local success = pcall(function()
-                        ContentProvider:PreloadAsync({buttonClickSound})
-                    end)
-                    if success then
-                        saveData(SOUND_FILE, {SoundId = soundId:match("%d+$")})
-                        showNotification("Sound ID set successfully", "Button")
-                    else
-                        buttonClickSound.SoundId = ""
-                        showNotification("Failed to load sound", "Button")
+                elseif child:IsA("Frame") and child.Name:find("Slider") then
+                    for _, sliderChild in ipairs(child:GetChildren()) do
+                        if sliderChild.Name == "SliderFill" then
+                            sliderChild.BackgroundColor3 = theme.AccentColor
+                        end
                     end
                 end
             end
-        })
+        end
+
+        updateElementColors(tabContents)
     end
+
+    function window:Destroy()
+        if screenGui then
+            screenGui:Destroy()
+            debugPrint("Window destroyed")
+        end
+    end
+
+    local settingsTab = window:CreateTab("Settings")
+    local backgroundSection = settingsTab:AddSection("Background Settings")
+    
+    backgroundSection:AddInput({
+        Name = "Image ID",
+        Default = savedBackground,
+        Callback = function(value)
+            window:SetBackground(value)
+        end
+    })
+
+    backgroundSection:AddInput({
+        Name = "Video ID",
+        Default = savedVideo,
+        Callback = function(value)
+            window:SetVideoBackground(value)
+        end
+    })
+
+    local notificationSection = settingsTab:AddSection("Notification Settings")
+    notificationSection:AddToggle({
+        Name = "Enable Notifications",
+        Default = NOTIFICATIONS_ENABLED,
+        Callback = function(state)
+            NOTIFICATIONS_ENABLED = state
+            saveData(NOTIFICATION_FILE, {Enabled = state})
+            showNotification("Notifications " .. (state and "Enabled" or "Disabled"), "Toggle")
+        end
+    })
+
+    local soundSection = settingsTab:AddSection("Sound Settings")
+    soundSection:AddInput({
+        Name = "Sound ID",
+        Default = savedSound.SoundId,
+        Callback = function(value)
+            buttonClickSound.SoundId = value ~= "" and "rbxassetid://" .. value or ""
+            saveData(SOUND_FILE, {SoundId = value})
+        end
+    })
 
     return window
 end
