@@ -55,6 +55,7 @@ function Gghiza07UI:CreateWindow(config)
     local THEME_FILE = SETTINGS_FOLDER .. "/theme.json"
     local ELEMENTS_FILE = SETTINGS_FOLDER .. "/elements.json"
     local SOUND_FILE = SETTINGS_FOLDER .. "/sound.json"
+    local NOTIFICATION_FILE = SETTINGS_FOLDER .. "/notification.json"
     local KEY_FILE = SETTINGS_FOLDER .. "/" .. (config.Keyconfig and config.Keyconfig.FileName or "key") .. ".txt"
 
     local elementStates = {
@@ -168,6 +169,10 @@ function Gghiza07UI:CreateWindow(config)
         theme.BackgroundColor = Color3.fromRGB(31, 37, 38)
     end
 
+    -- โหลดสถานะการแจ้งเตือน
+    local loadedNotification = loadData(NOTIFICATION_FILE, {Enabled = true})
+    NOTIFICATIONS_ENABLED = loadedNotification.Enabled
+
     local player = game.Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui", 10)
     if not playerGui then
@@ -267,7 +272,7 @@ function Gghiza07UI:CreateWindow(config)
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0.6, 0, 0.7, 0) -- ปรับขนาดให้เล็กลงสำหรับมือถือ
+    mainFrame.Size = UDim2.new(0.6, 0, 0.7, 0)
     mainFrame.Position = UDim2.new(0.2, 0, 0.15, 0)
     mainFrame.BackgroundColor3 = theme.BackgroundColor
     mainFrame.BackgroundTransparency = theme.Transparency
@@ -406,7 +411,7 @@ function Gghiza07UI:CreateWindow(config)
 
     local toggleButton = Instance.new("TextButton")
     toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(0, 60, 0, 60) -- ปรับขนาดให้ใหญ่ขึ้นสำหรับมือถือ
+    toggleButton.Size = UDim2.new(0, 60, 0, 60)
     toggleButton.Position = UDim2.new(0, 10, 1, -70)
     toggleButton.BackgroundColor3 = theme.AccentColor
     toggleButton.TextColor3 = theme.TextColor
@@ -418,7 +423,7 @@ function Gghiza07UI:CreateWindow(config)
     toggleButton.Parent = screenGui
 
     local cornerToggle = Instance.new("UICorner")
-    cornerToggle.CornerRadius = UDim.new(1, 0) -- ปรับเป็นวงกลม
+    cornerToggle.CornerRadius = UDim.new(1, 0)
     cornerToggle.Parent = toggleButton
 
     local buttonClickSound = Instance.new("Sound")
@@ -434,24 +439,26 @@ function Gghiza07UI:CreateWindow(config)
     end
 
     local notifications = {}
-    local NOTIFICATION_HEIGHT = 50
-    local NOTIFICATION_SPACING = 10
+    local NOTIFICATION_HEIGHT = 40
+    local NOTIFICATION_SPACING = 5
     local NOTIFICATION_DURATION = 2
 
     local function updateNotificationPositions()
         for i, notif in ipairs(notifications) do
-            local targetY = 10 + (i - 1) * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING)
+            local targetY = 1 - (i * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING) / screenGui.AbsoluteSize.Y)
             TweenService:Create(notif.Frame, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                Position = UDim2.new(1, -210, 0, targetY)
+                Position = UDim2.new(1, -210, targetY, -10)
             }):Play()
         end
     end
 
-    local function showNotification(message)
+    local function showNotification(message, elementType)
         if not NOTIFICATIONS_ENABLED then return end
+        if not (elementType == "Toggle" or elementType == "Button" or elementType == "Dropdown") then return end
+
         local notificationFrame = Instance.new("Frame")
         notificationFrame.Size = UDim2.new(0, 200, 0, NOTIFICATION_HEIGHT)
-        notificationFrame.Position = UDim2.new(1, -210, 0, 10 + #notifications * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING))
+        notificationFrame.Position = UDim2.new(1, -210, 1, -10 - #notifications * (NOTIFICATION_HEIGHT + NOTIFICATION_SPACING))
         notificationFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         notificationFrame.BackgroundTransparency = 0.2
         notificationFrame.ZIndex = 1002
@@ -467,7 +474,8 @@ function Gghiza07UI:CreateWindow(config)
         notifLabel.BackgroundTransparency = 1
         notifLabel.Text = message
         notifLabel.TextColor3 = theme.TextColor
-        notifLabel.TextScaled = true
+        notifLabel.TextSize = 14
+        notifLabel.TextXAlignment = Enum.TextXAlignment.Left
         notifLabel.ZIndex = 1003
         notifLabel.Parent = notificationFrame
 
@@ -518,9 +526,7 @@ function Gghiza07UI:CreateWindow(config)
         if buttonClickSound.SoundId ~= "" then
             buttonClickSound:Play()
         end
-        if NOTIFICATIONS_ENABLED then
-            showNotification("UI " .. (targetState and "Opened" or "Closed"))
-        end
+        showNotification("UI " .. (targetState and "Opened" or "Closed"), "Button")
     end
 
     toggleButton.MouseButton1Click:Connect(toggleUI)
@@ -582,18 +588,14 @@ function Gghiza07UI:CreateWindow(config)
                 if buttonClickSound.SoundId ~= "" then
                     buttonClickSound:Play()
                 end
-                if NOTIFICATIONS_ENABLED then
-                    showNotification("Key verified")
-                end
+                showNotification("Key verified", "Button")
             else
                 keyInput.Text = ""
                 keyInput.PlaceholderText = "Invalid key, try again"
                 if buttonClickSound.SoundId ~= "" then
                     buttonClickSound:Play()
                 end
-                if NOTIFICATIONS_ENABLED then
-                    showNotification("Invalid key")
-                end
+                showNotification("Invalid key", "Button")
             end
         end)
 
@@ -609,14 +611,10 @@ function Gghiza07UI:CreateWindow(config)
                     if buttonClickSound.SoundId ~= "" then
                         buttonClickSound:Play()
                     end
-                    if NOTIFICATIONS_ENABLED then
-                        showNotification("Key link copied")
-                    end
+                    showNotification("Key link copied", "Button")
                 else
                     warn("Failed to copy key link:", err)
-                    if NOTIFICATIONS_ENABLED then
-                        showNotification("Failed to copy key link")
-                    end
+                    showNotification("Failed to copy key link", "Button")
                 end
             end
         end)
@@ -703,9 +701,7 @@ function Gghiza07UI:CreateWindow(config)
             if buttonClickSound.SoundId ~= "" then
                 buttonClickSound:Play()
             end
-            if NOTIFICATIONS_ENABLED then
-                showNotification("Switched to " .. tabName)
-            end
+            showNotification("Switched to " .. tabName, "Button")
         end
 
         tabButton.MouseButton1Click:Connect(selectTab)
@@ -778,9 +774,7 @@ function Gghiza07UI:CreateWindow(config)
                     if buttonClickSound.SoundId ~= "" then
                         buttonClickSound:Play()
                     end
-                    if NOTIFICATIONS_ENABLED then
-                        showNotification("Clicked " .. (buttonConfig.Name or "Button"))
-                    end
+                    showNotification("Clicked " .. (buttonConfig.Name or "Button"), "Button")
 
                     if buttonConfig.Callback then
                         local success, err = pcall(buttonConfig.Callback)
@@ -855,9 +849,7 @@ function Gghiza07UI:CreateWindow(config)
                     if buttonClickSound.SoundId ~= "" then
                         buttonClickSound:Play()
                     end
-                    if NOTIFICATIONS_ENABLED then
-                        showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
-                    end
+                    showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"), "Toggle")
 
                     if toggleConfig.Callback then
                         local success, err = pcall(function()
@@ -954,9 +946,6 @@ function Gghiza07UI:CreateWindow(config)
 
                             if buttonClickSound.SoundId ~= "" then
                                 buttonClickSound:Play()
-                            end
-                            if NOTIFICATIONS_ENABLED then
-                                showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
                             end
 
                             if sliderConfig.Callback then
@@ -1091,9 +1080,7 @@ function Gghiza07UI:CreateWindow(config)
                                     checkbox.BackgroundColor3 = theme.AccentColor
                                     checkbox.Text = "✓"
                                 else
-                                    if NOTIFICATIONS_ENABLED then
-                                        showNotification("Maximum selections reached")
-                                    end
+                                    showNotification("ถึงจำนวนสูงสุดที่เลือกได้แล้ว", "Dropdown")
                                     return
                                 end
                             end
@@ -1101,9 +1088,7 @@ function Gghiza07UI:CreateWindow(config)
                             if buttonClickSound.SoundId ~= "" then
                                 buttonClickSound:Play()
                             end
-                            if NOTIFICATIONS_ENABLED then
-                                showNotification("Selected " .. tostring(option))
-                            end
+                            showNotification("เลือก " .. tostring(option), "Dropdown")
                         else
                             for _, btn in ipairs(optionButtons) do
                                 btn.Label.TextColor3 = theme.TextColor
@@ -1115,9 +1100,7 @@ function Gghiza07UI:CreateWindow(config)
                             if buttonClickSound.SoundId ~= "" then
                                 buttonClickSound:Play()
                             end
-                            if NOTIFICATIONS_ENABLED then
-                                showNotification("Selected " .. tostring(option))
-                            end
+                            showNotification("เลือก " .. tostring(option), "Dropdown")
                         end
 
                         if dropdownConfig.Callback then
@@ -1202,9 +1185,6 @@ function Gghiza07UI:CreateWindow(config)
                         if buttonClickSound.SoundId ~= "" then
                             buttonClickSound:Play()
                         end
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("Input updated: " .. textBox.Text)
-                        end
 
                         if inputConfig.Callback then
                             local success, err = pcall(function()
@@ -1278,9 +1258,7 @@ function Gghiza07UI:CreateWindow(config)
                 if buttonClickSound.SoundId ~= "" then
                     buttonClickSound:Play()
                 end
-                if NOTIFICATIONS_ENABLED then
-                    showNotification("Clicked " .. (buttonConfig.Name or "Button"))
-                end
+                showNotification("Clicked " .. (buttonConfig.Name or "Button"), "Button")
 
                 if buttonConfig.Callback then
                     local success, err = pcall(buttonConfig.Callback)
@@ -1356,9 +1334,7 @@ function Gghiza07UI:CreateWindow(config)
                 if buttonClickSound.SoundId ~= "" then
                     buttonClickSound:Play()
                 end
-                if NOTIFICATIONS_ENABLED then
-                    showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"))
-                end
+                showNotification((toggleConfig.Name or "Toggle") .. " set to " .. (toggleState and "ON" or "OFF"), "Toggle")
 
                 if toggleConfig.Callback then
                     local success, err = pcall(function()
@@ -1456,9 +1432,6 @@ function Gghiza07UI:CreateWindow(config)
 
                         if buttonClickSound.SoundId ~= "" then
                             buttonClickSound:Play()
-                        end
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification((sliderConfig.Name or "Slider") .. " set to " .. string.format("%.2f", value))
                         end
 
                         if sliderConfig.Callback then
@@ -1579,7 +1552,9 @@ function Gghiza07UI:CreateWindow(config)
                 optionLabel.Active = true
                 optionLabel.AutoButtonColor = true
                 optionLabel.Parent = optionFrame
+
                 table.insert(optionButtons, {Label = optionLabel, Checkbox = checkbox})
+
                 local function handleSelection()
                     if isMulti then
                         if table.find(selectedOptions, option) then
@@ -1592,9 +1567,7 @@ function Gghiza07UI:CreateWindow(config)
                                 checkbox.BackgroundColor3 = theme.AccentColor
                                 checkbox.Text = "✓"
                             else
-                                if NOTIFICATIONS_ENABLED then
-                                    showNotification("ถึงจำนวนสูงสุดที่เลือกได้แล้ว")
-                                end
+                                showNotification("ถึงจำนวนสูงสุดที่เลือกได้แล้ว", "Dropdown")
                                 return
                             end
                         end
@@ -1602,9 +1575,7 @@ function Gghiza07UI:CreateWindow(config)
                         if buttonClickSound.SoundId ~= "" then
                             buttonClickSound:Play()
                         end
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("เลือก " .. tostring(option))
-                        end
+                        showNotification("เลือก " .. tostring(option), "Dropdown")
                     else
                         for _, btn in ipairs(optionButtons) do
                             btn.Label.TextColor3 = theme.TextColor
@@ -1616,9 +1587,7 @@ function Gghiza07UI:CreateWindow(config)
                         if buttonClickSound.SoundId ~= "" then
                             buttonClickSound:Play()
                         end
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("เลือก " .. tostring(option))
-                        end
+                        showNotification("เลือก " .. tostring(option), "Dropdown")
                     end
 
                     if dropdownConfig.Callback then
@@ -1651,235 +1620,193 @@ function Gghiza07UI:CreateWindow(config)
         function tab:AddInput(inputConfig)
             if not inputConfig or type(inputConfig) ~= "table" then
                 warn("Invalid input config. Expected a table.")
-                return
+                if not inputConfig or type(inputConfig) ~= "table" then
+                    warn("Invalid input config. Expected a table.")
+                    return
+                end
+
+                local inputFrame = Instance.new("Frame")
+                inputFrame.Name = inputConfig.Name or "Input"
+                inputFrame.Size = UDim2.new(1, -10, 0, 50)
+                inputFrame.BackgroundTransparency = 1
+                inputFrame.LayoutOrder = #tabContent:GetChildren()
+                inputFrame.ZIndex = 11
+                inputFrame.Active = true
+                inputFrame.Parent = tabContent
+
+                local inputLabel = Instance.new("TextLabel")
+                inputLabel.Size = UDim2.new(0.4, 0, 1, 0)
+                inputLabel.BackgroundTransparency = 1
+                inputLabel.Text = inputConfig.Name or "Input"
+                inputLabel.TextColor3 = theme.TextColor
+                inputLabel.TextScaled = true
+                inputLabel.TextXAlignment = Enum.TextXAlignment.Left
+                inputLabel.ZIndex = 11
+                inputLabel.Parent = inputFrame
+
+                local defaultText = inputConfig.Default or ""
+                if elementStates.Inputs and elementStates.Inputs[inputConfig.Name] ~= nil then
+                    defaultText = elementStates.Inputs[inputConfig.Name]
+                end
+
+                local textBox = Instance.new("TextBox")
+                textBox.Size = UDim2.new(0.6, 0, 0.8, 0)
+                textBox.Position = UDim2.new(0.4, 0, 0.1, 0)
+                textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                textBox.Text = defaultText
+                textBox.TextColor3 = theme.TextColor
+                textBox.TextScaled = true
+                textBox.TextEditable = true
+                textBox.ZIndex = 11
+                textBox.Parent = inputFrame
+
+                local cornerInput = Instance.new("UICorner")
+                cornerInput.CornerRadius = UDim.new(0, 5)
+                cornerInput.Parent = textBox
+
+                textBox.FocusLost:Connect(function(enterPressed)
+                    if enterPressed then
+                        if not elementStates.Inputs then
+                            elementStates.Inputs = {}
+                        end
+                        elementStates.Inputs[inputConfig.Name] = textBox.Text
+                        saveData(ELEMENTS_FILE, elementStates)
+
+                        if buttonClickSound.SoundId ~= "" then
+                            buttonClickSound:Play()
+                        end
+
+                        if inputConfig.Callback then
+                            local success, err = pcall(function()
+                                inputConfig.Callback(textBox.Text)
+                            end)
+                            if not success then
+                                debugPrint("Input callback error:", err)
+                            end
+                        end
+                    end
+                end)
+
+                updateCanvasSize()
+                return inputFrame
             end
 
-            local inputFrame = Instance.new("Frame")
-            inputFrame.Name = inputConfig.Name or "Input"
-            inputFrame.Size = UDim2.new(1, -10, 0, 50)
-            inputFrame.BackgroundTransparency = 1
-            inputFrame.LayoutOrder = #tabContent:GetChildren()
-            inputFrame.ZIndex = 11
-            inputFrame.Active = true
-            inputFrame.Parent = tabContent
+            function tab:AddLabel(labelConfig)
+                if not labelConfig or type(labelConfig) ~= "table" then
+                    warn("Invalid label config. Expected a table.")
+                    return
+                end
 
-            local inputLabel = Instance.new("TextLabel")
-            inputLabel.Size = UDim2.new(0.4, 0, 1, 0)
-            inputLabel.BackgroundTransparency = 1
-            inputLabel.Text = inputConfig.Name or "Input"
-            inputLabel.TextColor3 = theme.TextColor
-            inputLabel.TextScaled = true
-            inputLabel.TextXAlignment = Enum.TextXAlignment.Left
-            inputLabel.ZIndex = 11
-            inputLabel.Parent = inputFrame
+                local labelFrame = Instance.new("Frame")
+                labelFrame.Name = labelConfig.Name or "Label"
+                labelFrame.Size = UDim2.new(1, -10, 0, 30)
+                labelFrame.BackgroundTransparency = 1
+                labelFrame.LayoutOrder = #tabContent:GetChildren()
+                labelFrame.ZIndex = 11
+                labelFrame.Active = true
+                labelFrame.Parent = tabContent
 
-            local defaultText = inputConfig.Default or ""
-            if elementStates.Inputs and elementStates.Inputs[inputConfig.Name] ~= nil then
-                defaultText = elementStates.Inputs[inputConfig.Name]
+                local labelText = Instance.new("TextLabel")
+                labelText.Size = UDim2.new(1, 0, 1, 0)
+                labelText.BackgroundTransparency = 1
+                labelText.Text = labelConfig.Text or "Label"
+                labelText.TextColor3 = theme.TextColor
+                labelText.TextScaled = true
+                labelText.TextXAlignment = Enum.TextXAlignment.Left
+                labelText.ZIndex = 11
+                labelText.Parent = labelFrame
+
+                updateCanvasSize()
+                return labelFrame
             end
 
-            local textBox = Instance.new("TextBox")
-            textBox.Size = UDim2.new(0.6, 0, 0.8, 0)
-            textBox.Position = UDim2.new(0.4, 0, 0.1, 0)
-            textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            textBox.Text = defaultText
-            textBox.TextColor3 = theme.TextColor
-            textBox.TextScaled = true
-            textBox.TextEditable = true
-            textBox.ZIndex = 11
-            textBox.Parent = inputFrame
+            return tab
+        end
 
-            local cornerInput = Instance.new("UICorner")
-            cornerInput.CornerRadius = UDim.new(0, 5)
-            cornerInput.Parent = textBox
+        function window:AddBackgroundOptions()
+            local tab = window:CreateTab("Settinginfo")
 
-            textBox.FocusLost:Connect(function(enterPressed)
-                if enterPressed then
-                    if not elementStates.Inputs then
-                        elementStates.Inputs = {}
-                    end
-                    elementStates.Inputs[inputConfig.Name] = textBox.Text
-                    saveData(ELEMENTS_FILE, elementStates)
+            local section = tab:AddSection("ตั้งค่าแจ้งเตือน")
 
-                    if buttonClickSound.SoundId ~= "" then
-                        buttonClickSound:Play()
-                    end
-                    if NOTIFICATIONS_ENABLED then
-                        showNotification("อัพเดทอินพุต: " .. textBox.Text)
-                    end
+            section:AddToggle({
+                Name = "เปิดแจ้งเตือน",
+                Default = NOTIFICATIONS_ENABLED,
+                Callback = function(state)
+                    NOTIFICATIONS_ENABLED = state
+                    saveData(NOTIFICATION_FILE, {Enabled = state})
+                    showNotification("แจ้งเตือน " .. (state and "เปิด" or "ปิด"), "Toggle")
+                end
+            })
 
-                    if inputConfig.Callback then
-                        local success, err = pcall(function()
-                            inputConfig.Callback(textBox.Text)
+            local sectionSound = tab:AddSection("ตั้งค่าเสียง")
+
+            sectionSound:AddInput({
+                Name = "Sound ID",
+                Default = "",
+                Callback = function(value)
+                    local soundId = tostring(value)
+                    if soundId and soundId ~= "" then
+                        if not soundId:match("^rbxassetid://") then
+                            soundId = "rbxassetid://" .. soundId
+                        end
+                        buttonClickSound.SoundId = soundId
+                        local success = pcall(function()
+                            ContentProvider:PreloadAsync({buttonClickSound})
                         end)
-                        if not success then
-                            debugPrint("Input callback error:", err)
+                        if success then
+                            saveData(SOUND_FILE, {SoundId = soundId:match("%d+$")})
+                            showNotification("ตั้งค่า Sound ID สำเร็จ", "Button")
+                        else
+                            buttonClickSound.SoundId = ""
+                            showNotification("โหลดเสียงล้มเหลว", "Button")
                         end
                     end
                 end
+            })
+
+            local sectionUIScale = tab:AddSection("ปรับขนาด UI")
+
+            sectionUIScale:AddSlider({
+                Name = "ขนาด UI",
+                Min = 0.5,
+                Max = 1.5,
+                Default = 1,
+                Callback = function(value)
+                    mainFrame.Size = UDim2.new(0.6 * value, 0, 0.7 * value, 0)
+                    showNotification("ปรับขนาด UI เป็น " .. string.format("%.2f", value) .. "x", "Slider")
+                end
+            })
+        end
+
+        local loadedBackground = loadData(BACKGROUND_FILE, "")
+        if loadedBackground and loadedBackground ~= "" then
+            imageLabel.Image = loadedBackground
+            imageLabel.ImageTransparency = 0
+            mainFrame.BackgroundTransparency = 1
+            local success = pcall(function()
+                ContentProvider:PreloadAsync({imageLabel})
             end)
-
-            updateCanvasSize()
-            return inputFrame
+            if not success then
+                imageLabel.ImageTransparency = 1
+                mainFrame.BackgroundTransparency = theme.Transparency
+            end
         end
 
-        function tab:AddLabel(labelConfig)
-            if not labelConfig or type(labelConfig) ~= "table" then
-                warn("Invalid label config. Expected a table.")
-                return
+        local loadedVideo = loadData(VIDEO_FILE, "")
+        if loadedVideo and loadedVideo ~= "" then
+            videoFrame.Video = loadedVideo
+            videoFrame.Visible = true
+            local success = pcall(function()
+                ContentProvider:PreloadAsync({videoFrame})
+                videoFrame:Play()
+            end)
+            if not success then
+                videoFrame.Visible = false
             end
-
-            local labelFrame = Instance.new("Frame")
-            labelFrame.Name = labelConfig.Name or "Label"
-            labelFrame.Size = UDim2.new(1, -10, 0, 30)
-            labelFrame.BackgroundTransparency = 1
-            labelFrame.LayoutOrder = #tabContent:GetChildren()
-            labelFrame.ZIndex = 11
-            labelFrame.Active = true
-            labelFrame.Parent = tabContent
-
-            local labelText = Instance.new("TextLabel")
-            labelText.Size = UDim2.new(1, 0, 1, 0)
-            labelText.BackgroundTransparency = 1
-            labelText.Text = labelConfig.Text or "Label"
-            labelText.TextColor3 = theme.TextColor
-            labelText.TextScaled = true
-            labelText.TextXAlignment = Enum.TextXAlignment.Left
-            labelText.ZIndex = 11
-            labelText.Parent = labelFrame
-
-            updateCanvasSize()
-            return labelFrame
         end
 
-        return tab
+        return window
     end
 
-    function window:AddBackgroundOptions()
-        local tab = window:CreateTab("ตั้งค่า")
-
-        local section = tab:AddSection("การตั้งค่าพื้นหลัง")
-
-        section:AddLabel({Text = "ตั้งค่าภาพพื้นหลังและวิดีโอ"})
-
-        section:AddInput({
-            Name = "Image ID",
-            Default = "",
-            Callback = function(value)
-                local imageId = tostring(value)
-                if imageId and imageId ~= "" then
-                    if not imageId:match("^rbxassetid://") then
-                        imageId = "rbxassetid://" .. imageId
-                    end
-                    imageLabel.Image = imageId
-                    imageLabel.ImageTransparency = 0
-                    mainFrame.BackgroundTransparency = 1
-                    local success = pcall(function()
-                        ContentProvider:PreloadAsync({imageLabel})
-                    end)
-                    if success then
-                        saveData(BACKGROUND_FILE, imageId)
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("ตั้งค่าภาพพื้นหลังสำเร็จ")
-                        end
-                    else
-                        imageLabel.ImageTransparency = 1
-                        mainFrame.BackgroundTransparency = theme.Transparency
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("โหลดภาพล้มเหลว")
-                        end
-                    end
-                end
-            end
-        })
-
-        section:AddInput({
-            Name = "Video ID",
-            Default = "",
-            Callback = function(value)
-                local videoId = tostring(value)
-                if videoId and videoId ~= "" then
-                    if not videoId:match("^rbxassetid://") then
-                        videoId = "rbxassetid://" .. videoId
-                    end
-                    videoFrame.Video = videoId
-                    videoFrame.Visible = true
-                    local success = pcall(function()
-                        ContentProvider:PreloadAsync({videoFrame})
-                        videoFrame:Play()
-                    end)
-                    if success then
-                        saveData(VIDEO_FILE, videoId)
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("ตั้งค่าวิดีโอพื้นหลังสำเร็จ")
-                        end
-                    else
-                        videoFrame.Visible = false
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("โหลดวิดีโอล้มเหลว")
-                        end
-                    end
-                end
-            end
-        })
-
-        section:AddInput({
-            Name = "Sound ID",
-            Default = "",
-            Callback = function(value)
-                local soundId = tostring(value)
-                if soundId and soundId ~= "" then
-                    if not soundId:match("^rbxassetid://") then
-                        soundId = "rbxassetid://" .. soundId
-                    end
-                    buttonClickSound.SoundId = soundId
-                    local success = pcall(function()
-                        ContentProvider:PreloadAsync({buttonClickSound})
-                    end)
-                    if success then
-                        saveData(SOUND_FILE, {SoundId = soundId:match("%d+$")})
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("ตั้งค่า Sound ID สำเร็จ")
-                        end
-                    else
-                        buttonClickSound.SoundId = ""
-                        if NOTIFICATIONS_ENABLED then
-                            showNotification("โหลดเสียงล้มเหลว")
-                        end
-                    end
-                end
-            end
-        })
-    end
-
-    local loadedBackground = loadData(BACKGROUND_FILE, "")
-    if loadedBackground and loadedBackground ~= "" then
-        imageLabel.Image = loadedBackground
-        imageLabel.ImageTransparency = 0
-        mainFrame.BackgroundTransparency = 1
-        local success = pcall(function()
-            ContentProvider:PreloadAsync({imageLabel})
-        end)
-        if not success then
-            imageLabel.ImageTransparency = 1
-            mainFrame.BackgroundTransparency = theme.Transparency
-        end
-    end
-
-    local loadedVideo = loadData(VIDEO_FILE, "")
-    if loadedVideo and loadedVideo ~= "" then
-        videoFrame.Video = loadedVideo
-        videoFrame.Visible = true
-        local success = pcall(function()
-            ContentProvider:PreloadAsync({videoFrame})
-            videoFrame:Play()
-        end)
-        if not success then
-            videoFrame.Visible = false
-        end
-    end
-
-    return window
+    return Gghiza07UI
 end
-
-return Gghiza07UI
