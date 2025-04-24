@@ -1266,10 +1266,10 @@ function Gghiza07UI:CreateWindow(config)
                 labelFrame.Name = labelConfig.Name or "Label"
                 labelFrame.Size = UDim2.new(1, -10, 0, 30)
                 labelFrame.BackgroundTransparency = 1
-                labelFrame.LayoutOrder = #sectionContent:GetChildren()
+                labelFrame.LayoutOrder = #tabContent:GetChildren()
                 labelFrame.ZIndex = 11
                 labelFrame.Active = true
-                labelFrame.Parent = sectionContent
+                labelFrame.Parent = tabContent
 
                 local labelText = Instance.new("TextLabel")
                 labelText.Size = UDim2.new(1, 0, 1, 0)
@@ -1787,7 +1787,15 @@ function Gghiza07UI:CreateWindow(config)
             if saveSetting then
                 saveData(BACKGROUND_FILE, imageId)
             end
-            imageLabel.Image = "rbxassetid://" .. imageId
+            -- Check if imageId is already a full URL (e.g., starts with rbxthumb://)
+            local finalImageUrl
+            if imageId:match("^rbxthumb://") then
+                finalImageUrl = imageId
+            else
+                -- If it's just an ID, format it as rbxthumb://type=Asset&id=<id>&w=420&h=420
+                finalImageUrl = "rbxthumb://type=Asset&id=" .. imageId .. "&w=420&h=420"
+            end
+            imageLabel.Image = finalImageUrl
             imageLabel.ImageTransparency = 0
             videoFrame.Visible = false
         end)
