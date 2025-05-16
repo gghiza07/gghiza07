@@ -3,7 +3,6 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
 local ui = {}
 
@@ -11,7 +10,6 @@ function ui:CreateWindow(config)
     local win = {}
     config = config or {}
     config.Name = config.Name or "My UI"
-    config.Creditconfig = config.Creditconfig or { Name = "", Show = false }
 
     -- Create ScreenGui
     local screenGui = Instance.new("ScreenGui")
@@ -38,16 +36,20 @@ function ui:CreateWindow(config)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 500, 0, 400)
     frame.Position = UDim2.new(0.5, -250, 0.5, -200)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BackgroundTransparency = 0.1
     frame.BorderSizePixel = 0
     frame.Parent = screenGui
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
-    
+
     -- Add shadow
     local uiStroke = Instance.new("UIStroke", frame)
     uiStroke.Thickness = 2
-    uiStroke.Color = Color3.fromRGB(60, 60, 60)
-    uiStroke.Transparency = 0.8
+    uiStroke.Color = Color3.fromRGB(50, 50, 50)
+    uiStroke.Transparency = 0.5
+
+    -- Simulate blur effect with transparency (UIBlurEffect may not be supported in all executors)
+    frame.BackgroundTransparency = 0.1
 
     -- Make window draggable
     local dragging, dragInput, dragStart, startPos
@@ -56,7 +58,7 @@ function ui:CreateWindow(config)
         frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
     frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
@@ -68,7 +70,7 @@ function ui:CreateWindow(config)
         end
     end)
     frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
@@ -80,8 +82,8 @@ function ui:CreateWindow(config)
 
     -- Title label
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0, 250, 0, 30)
-    titleLabel.Position = UDim2.new(0, 15, 0, 15)
+    titleLabel.Size = UDim2.new(1, -20, 0, 40)
+    titleLabel.Position = UDim2.new(0, 10, 0, 10)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = config.Name
     titleLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -90,55 +92,52 @@ function ui:CreateWindow(config)
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = frame
 
-    -- Credit label
-    if config.Creditconfig.Show then
-        local creditLabel = Instance.new("TextLabel")
-        creditLabel.Size = UDim2.new(0, 100, 0, 15)
-        creditLabel.Position = UDim2.new(0, 390, 0, 15)
-        creditLabel.BackgroundTransparency = 1
-        creditLabel.Text = config.Creditconfig.Name or ""
-        creditLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        creditLabel.TextScaled = true
-        creditLabel.Font = Enum.Font.Gotham
-        creditLabel.TextXAlignment = Enum.TextXAlignment.Right
-        creditLabel.Parent = frame
-    end
-
-    -- Tab system
+    -- Tab system (horizontal tabs at the top)
     win.Tabs = {}
     win.CurrentTab = nil
 
     win.TabContainer = Instance.new("Frame")
-    win.TabContainer.Size = UDim2.new(0, 120, 1, -60)
-    win.TabContainer.Position = UDim2.new(0, 15, 0, 60)
+    win.TabContainer.Size = UDim2.new(1, -20, 0, 40)
+    win.TabContainer.Position = UDim2.new(0, 10, 0, 50)
     win.TabContainer.BackgroundTransparency = 1
     win.TabContainer.ZIndex = 2
     win.TabContainer.Parent = frame
 
+    local tabListLayout = Instance.new("UIListLayout")
+    tabListLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    tabListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    tabListLayout.Padding = UDim.new(0, 10)
+    tabListLayout.Parent = win.TabContainer
+
     win.ContentArea = Instance.new("ScrollingFrame")
-    win.ContentArea.Size = UDim2.new(0, 350, 1, -60)
-    win.ContentArea.Position = UDim2.new(0, 140, 0, 60)
+    win.ContentArea.Size = UDim2.new(1, -20, 1, -100)
+    win.ContentArea.Position = UDim2.new(0, 10, 0, 90)
     win.ContentArea.BackgroundTransparency = 1
     win.ContentArea.ZIndex = 2
     win.ContentArea.ScrollBarThickness = 4
     win.ContentArea.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    win.ContentArea.CanvasSize = UDim2.new(0, 0, 0, 0) -- Will adjust dynamically
     win.ContentArea.Parent = frame
-    local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.Padding = UDim.new(0, 5)
-    uiListLayout.Parent = win.ContentArea
+
+    local contentListLayout = Instance.new("UIListLayout")
+    contentListLayout.Padding = UDim.new(0, 5)
+    contentListLayout.Parent = win.ContentArea
+    contentListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        win.ContentArea.CanvasSize = UDim2.new(0, 0, 0, contentListLayout.AbsoluteContentSize.Y)
+    end)
 
     function win:CreateTab(tabConfig)
         tabConfig = tabConfig or {}
         tabConfig.Name = tabConfig.Name or "Tab"
         tabConfig.Imageid = tabConfig.Imageid or ""
 
-        local tabCount = #self.Tabs + 1
         local tabButton = Instance.new("TextButton")
-        tabButton.Size = UDim2.new(1, 0, 0, 32)
-        tabButton.Position = UDim2.new(0, 0, 0, (tabCount - 1) * 37)
-        tabButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        tabButton.Size = UDim2.new(0, 100, 0, 30)
+        tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        tabButton.BackgroundTransparency = 0.2
         tabButton.Text = tabConfig.Name
-        tabButton.TextColor3 = Color3.fromRGB(230, 230, 230)
+        tabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
         tabButton.TextScaled = true
         tabButton.Font = Enum.Font.GothamBold
         tabButton.AutoButtonColor = false
@@ -161,18 +160,24 @@ function ui:CreateWindow(config)
         tabContent.BackgroundTransparency = 1
         tabContent.Visible = false
         tabContent.Parent = self.ContentArea
-        local tabListLayout = Instance.new("UIListLayout")
-        tabListLayout.Padding = UDim.new(0, 5)
-        tabListLayout.Parent = tabContent
+
+        local tabContentListLayout = Instance.new("UIListLayout")
+        tabContentListLayout.Padding = UDim.new(0, 5)
+        tabContentListLayout.Parent = tabContent
+        tabContentListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            tabContent.Size = UDim2.new(1, 0, 0, tabContentListLayout.AbsoluteContentSize.Y)
+        end)
 
         tabButton.MouseButton1Click:Connect(function()
             if self.CurrentTab ~= tabContent then
                 if self.CurrentTab then
                     self.CurrentTab.Visible = false
-                    self.Tabs[self.CurrentTab].Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+                    self.Tabs[self.CurrentTab].Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                    self.Tabs[self.CurrentTab].Button.TextColor3 = Color3.fromRGB(200, 200, 200)
                 end
                 tabContent.Visible = true
                 tabButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+                tabButton.TextColor3 = Color3.new(1, 1, 1)
                 self.CurrentTab = tabContent
             end
         end)
@@ -183,8 +188,9 @@ function ui:CreateWindow(config)
         }
 
         -- Auto-select first tab
-        if tabCount == 1 then
+        if not self.CurrentTab then
             tabButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+            tabButton.TextColor3 = Color3.new(1, 1, 1)
             tabContent.Visible = true
             self.CurrentTab = tabContent
         end
@@ -197,8 +203,9 @@ function ui:CreateWindow(config)
             btnConfig.Callfunction = btnConfig.Callfunction or function() end
 
             local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, -10, 0, 30)
-            button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            button.Size = UDim2.new(1, 0, 0, 30)
+            button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            button.BackgroundTransparency = 0.2
             button.Text = btnConfig.Name
             button.TextColor3 = Color3.new(1, 1, 1)
             button.TextScaled = true
@@ -212,10 +219,10 @@ function ui:CreateWindow(config)
 
             -- Hover effect
             button.MouseEnter:Connect(function()
-                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)}):Play()
+                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
             end)
             button.MouseLeave:Connect(function()
-                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
             end)
 
             return button
@@ -228,7 +235,7 @@ function ui:CreateWindow(config)
             toggleConfig.Callfunction = toggleConfig.Callfunction or function() end
 
             local toggleFrame = Instance.new("Frame")
-            toggleFrame.Size = UDim2.new(1, -10, 0, 30)
+            toggleFrame.Size = UDim2.new(1, 0, 0, 30)
             toggleFrame.BackgroundTransparency = 1
             toggleFrame.Parent = self
 
@@ -271,7 +278,7 @@ function ui:CreateWindow(config)
             dropConfig.Callfunction = dropConfig.Callfunction or function() end
 
             local dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Size = UDim2.new(1, -10, 0, 30)
+            dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
             dropdownFrame.BackgroundTransparency = 1
             dropdownFrame.Parent = self
 
@@ -288,7 +295,8 @@ function ui:CreateWindow(config)
             local dropdownBtn = Instance.new("TextButton")
             dropdownBtn.Size = UDim2.new(0, 40, 0, 20)
             dropdownBtn.Position = UDim2.new(1, -40, 0.5, -10)
-            dropdownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            dropdownBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            dropdownBtn.BackgroundTransparency = 0.2
             dropdownBtn.Text = "▼"
             dropdownBtn.TextColor3 = Color3.new(1, 1, 1)
             dropdownBtn.TextScaled = true
@@ -297,9 +305,10 @@ function ui:CreateWindow(config)
             Instance.new("UICorner", dropdownBtn).CornerRadius = UDim.new(0, 6)
 
             local dropdownMenu = Instance.new("Frame")
-            dropdownMenu.Size = UDim2.new(1, -10, 0, 0)
+            dropdownMenu.Size = UDim2.new(1, 0, 0, 0)
             dropdownMenu.Position = UDim2.new(0, 0, 1, 5)
-            dropdownMenu.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            dropdownMenu.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            dropdownMenu.BackgroundTransparency = 0.2
             dropdownMenu.Visible = false
             dropdownMenu.Parent = dropdownFrame
             Instance.new("UICorner", dropdownMenu).CornerRadius = UDim.new(0, 6)
@@ -317,7 +326,8 @@ function ui:CreateWindow(config)
             for i, option in ipairs(dropConfig.Option) do
                 local optionBtn = Instance.new("TextButton")
                 optionBtn.Size = UDim2.new(1, 0, 0, 20)
-                optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                optionBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                optionBtn.BackgroundTransparency = 0.2
                 optionBtn.Text = option
                 optionBtn.TextColor3 = Color3.new(1, 1, 1)
                 optionBtn.TextScaled = true
@@ -340,7 +350,7 @@ function ui:CreateWindow(config)
                     dropConfig.Callfunction(selected)
                 end)
             end
-            dropdownMenu.Size = UDim2.new(1, -10, 0, #dropConfig.Option * 22)
+            dropdownMenu.Size = UDim2.new(1, 0, 0, #dropConfig.Option * 22)
 
             dropdownBtn.MouseButton1Click:Connect(function()
                 dropdownMenu.Visible = not dropdownMenu.Visible
@@ -359,7 +369,7 @@ function ui:CreateWindow(config)
             slideConfig.Callfunction = slideConfig.Callfunction or function() end
 
             local sliderFrame = Instance.new("Frame")
-            sliderFrame.Size = UDim2.new(1, -10, 0, 50)
+            sliderFrame.Size = UDim2.new(1, 0, 0, 50)
             sliderFrame.BackgroundTransparency = 1
             sliderFrame.Parent = self
 
@@ -376,7 +386,8 @@ function ui:CreateWindow(config)
             local slider = Instance.new("Frame")
             slider.Size = UDim2.new(1, 0, 0, 10)
             slider.Position = UDim2.new(0, 0, 0, 30)
-            slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            slider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            slider.BackgroundTransparency = 0.2
             slider.Parent = sliderFrame
             Instance.new("UICorner", slider).CornerRadius = UDim.new(0, 5)
 
@@ -389,17 +400,17 @@ function ui:CreateWindow(config)
             local dragging = false
             local value = slideConfig.Min
             slider.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = true
                 end
             end)
             slider.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = false
                 end
             end)
             UserInputService.InputChanged:Connect(function(input)
-                if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                     local mouseX = input.Position.X
                     local sliderPos = slider.AbsolutePosition.X
                     local sliderWidth = slider.AbsoluteSize.X
@@ -424,7 +435,7 @@ function ui:CreateWindow(config)
             inputConfig.Callfunction = inputConfig.Callfunction or function() end
 
             local inputFrame = Instance.new("Frame")
-            inputFrame.Size = UDim2.new(1, -10, 0, 30)
+            inputFrame.Size = UDim2.new(1, 0, 0, 30)
             inputFrame.BackgroundTransparency = 1
             inputFrame.Parent = self
 
@@ -441,7 +452,8 @@ function ui:CreateWindow(config)
             local input = Instance.new("TextBox")
             input.Size = UDim2.new(0.6, 0, 0, 20)
             input.Position = UDim2.new(0.4, 0, 0.5, -10)
-            input.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            input.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            input.BackgroundTransparency = 0.2
             input.Text = ""
             input.PlaceholderText = inputConfig.DefaultText
             input.TextColor3 = Color3.new(1, 1, 1)
