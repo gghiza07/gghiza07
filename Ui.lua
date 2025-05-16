@@ -48,9 +48,6 @@ function ui:CreateWindow(config)
     uiStroke.Color = Color3.fromRGB(50, 50, 50)
     uiStroke.Transparency = 0.5
 
-    -- Simulate blur effect with transparency (UIBlurEffect may not be supported in all executors)
-    frame.BackgroundTransparency = 0.1
-
     -- Make window draggable
     local dragging, dragInput, dragStart, startPos
     local function updateInput(input)
@@ -87,9 +84,10 @@ function ui:CreateWindow(config)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = config.Name
     titleLabel.TextColor3 = Color3.new(1, 1, 1)
-    titleLabel.TextScaled = true
+    titleLabel.TextSize = 18 -- Fixed text size instead of TextScaled
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+    titleLabel.TextYAlignment = Enum.TextYAlignment.Center
     titleLabel.Parent = frame
 
     -- Tab system (horizontal tabs at the top)
@@ -105,7 +103,7 @@ function ui:CreateWindow(config)
 
     local tabListLayout = Instance.new("UIListLayout")
     tabListLayout.FillDirection = Enum.FillDirection.Horizontal
-    tabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    tabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     tabListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     tabListLayout.Padding = UDim.new(0, 10)
     tabListLayout.Parent = win.TabContainer
@@ -133,16 +131,18 @@ function ui:CreateWindow(config)
         tabConfig.Imageid = tabConfig.Imageid or ""
 
         local tabButton = Instance.new("TextButton")
-        tabButton.Size = UDim2.new(0, 100, 0, 30)
+        tabButton.Size = UDim2.new(0, 80, 0, 30) -- Reduced tab size
         tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         tabButton.BackgroundTransparency = 0.2
         tabButton.Text = tabConfig.Name
         tabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-        tabButton.TextScaled = true
+        tabButton.TextSize = 14 -- Smaller text size
         tabButton.Font = Enum.Font.GothamBold
         tabButton.AutoButtonColor = false
         tabButton.Parent = self.TabContainer
         Instance.new("UICorner", tabButton).CornerRadius = UDim.new(0, 8)
+        tabButton.TextXAlignment = Enum.TextXAlignment.Center
+        tabButton.TextYAlignment = Enum.TextYAlignment.Center
 
         -- Add image to tab button if Imageid is provided
         if tabConfig.Imageid ~= "" then
@@ -203,12 +203,12 @@ function ui:CreateWindow(config)
             btnConfig.Callfunction = btnConfig.Callfunction or function() end
 
             local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, 0, 0, 30)
+            button.Size = UDim2.new(1, -10, 0, 30)
             button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             button.BackgroundTransparency = 0.2
             button.Text = btnConfig.Name
             button.TextColor3 = Color3.new(1, 1, 1)
-            button.TextScaled = true
+            button.TextSize = 14
             button.Font = Enum.Font.Gotham
             button.Parent = self
             Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
@@ -235,7 +235,7 @@ function ui:CreateWindow(config)
             toggleConfig.Callfunction = toggleConfig.Callfunction or function() end
 
             local toggleFrame = Instance.new("Frame")
-            toggleFrame.Size = UDim2.new(1, 0, 0, 30)
+            toggleFrame.Size = UDim2.new(1, -10, 0, 30)
             toggleFrame.BackgroundTransparency = 1
             toggleFrame.Parent = self
 
@@ -244,7 +244,7 @@ function ui:CreateWindow(config)
             label.BackgroundTransparency = 1
             label.Text = toggleConfig.Name
             label.TextColor3 = Color3.new(1, 1, 1)
-            label.TextScaled = true
+            label.TextSize = 14
             label.Font = Enum.Font.Gotham
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = toggleFrame
@@ -278,7 +278,7 @@ function ui:CreateWindow(config)
             dropConfig.Callfunction = dropConfig.Callfunction or function() end
 
             local dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
+            dropdownFrame.Size = UDim2.new(1, -10, 0, 30)
             dropdownFrame.BackgroundTransparency = 1
             dropdownFrame.Parent = self
 
@@ -287,7 +287,7 @@ function ui:CreateWindow(config)
             label.BackgroundTransparency = 1
             label.Text = dropConfig.Name
             label.TextColor3 = Color3.new(1, 1, 1)
-            label.TextScaled = true
+            label.TextSize = 14
             label.Font = Enum.Font.Gotham
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = dropdownFrame
@@ -299,13 +299,13 @@ function ui:CreateWindow(config)
             dropdownBtn.BackgroundTransparency = 0.2
             dropdownBtn.Text = "▼"
             dropdownBtn.TextColor3 = Color3.new(1, 1, 1)
-            dropdownBtn.TextScaled = true
+            dropdownBtn.TextSize = 14
             dropdownBtn.Font = Enum.Font.Gotham
             dropdownBtn.Parent = dropdownFrame
             Instance.new("UICorner", dropdownBtn).CornerRadius = UDim.new(0, 6)
 
             local dropdownMenu = Instance.new("Frame")
-            dropdownMenu.Size = UDim2.new(1, 0, 0, 0)
+            dropdownMenu.Size = UDim2.new(1, -10, 0, 0)
             dropdownMenu.Position = UDim2.new(0, 0, 1, 5)
             dropdownMenu.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             dropdownMenu.BackgroundTransparency = 0.2
@@ -330,7 +330,7 @@ function ui:CreateWindow(config)
                 optionBtn.BackgroundTransparency = 0.2
                 optionBtn.Text = option
                 optionBtn.TextColor3 = Color3.new(1, 1, 1)
-                optionBtn.TextScaled = true
+                optionBtn.TextSize = 14
                 optionBtn.Font = Enum.Font.Gotham
                 optionBtn.Parent = dropdownMenu
                 Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
@@ -350,7 +350,7 @@ function ui:CreateWindow(config)
                     dropConfig.Callfunction(selected)
                 end)
             end
-            dropdownMenu.Size = UDim2.new(1, 0, 0, #dropConfig.Option * 22)
+            dropdownMenu.Size = UDim2.new(1, -10, 0, #dropConfig.Option * 22)
 
             dropdownBtn.MouseButton1Click:Connect(function()
                 dropdownMenu.Visible = not dropdownMenu.Visible
@@ -369,7 +369,7 @@ function ui:CreateWindow(config)
             slideConfig.Callfunction = slideConfig.Callfunction or function() end
 
             local sliderFrame = Instance.new("Frame")
-            sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+            sliderFrame.Size = UDim2.new(1, -10, 0, 50)
             sliderFrame.BackgroundTransparency = 1
             sliderFrame.Parent = self
 
@@ -378,7 +378,7 @@ function ui:CreateWindow(config)
             label.BackgroundTransparency = 1
             label.Text = slideConfig.Name .. ": " .. slideConfig.Min
             label.TextColor3 = Color3.new(1, 1, 1)
-            label.TextScaled = true
+            label.TextSize = 14
             label.Font = Enum.Font.Gotham
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = sliderFrame
@@ -435,7 +435,7 @@ function ui:CreateWindow(config)
             inputConfig.Callfunction = inputConfig.Callfunction or function() end
 
             local inputFrame = Instance.new("Frame")
-            inputFrame.Size = UDim2.new(1, 0, 0, 30)
+            inputFrame.Size = UDim2.new(1, -10, 0, 30)
             inputFrame.BackgroundTransparency = 1
             inputFrame.Parent = self
 
@@ -444,7 +444,7 @@ function ui:CreateWindow(config)
             label.BackgroundTransparency = 1
             label.Text = inputConfig.Name
             label.TextColor3 = Color3.new(1, 1, 1)
-            label.TextScaled = true
+            label.TextSize = 14
             label.Font = Enum.Font.Gotham
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = inputFrame
@@ -457,7 +457,7 @@ function ui:CreateWindow(config)
             input.Text = ""
             input.PlaceholderText = inputConfig.DefaultText
             input.TextColor3 = Color3.new(1, 1, 1)
-            input.TextScaled = true
+            input.TextSize = 14
             input.Font = Enum.Font.Gotham
             input.Parent = inputFrame
             Instance.new("UICorner", input).CornerRadius = UDim.new(0, 6)
