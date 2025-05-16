@@ -84,7 +84,7 @@ function ui:CreateWindow(config)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = config.Name
     titleLabel.TextColor3 = Color3.new(1, 1, 1)
-    titleLabel.TextSize = 18 -- Fixed text size instead of TextScaled
+    titleLabel.TextSize = 18
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Center
     titleLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -115,14 +115,15 @@ function ui:CreateWindow(config)
     win.ContentArea.ZIndex = 2
     win.ContentArea.ScrollBarThickness = 4
     win.ContentArea.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-    win.ContentArea.CanvasSize = UDim2.new(0, 0, 0, 0) -- Will adjust dynamically
+    win.ContentArea.CanvasSize = UDim2.new(0, 0, 0, 100) -- Minimum canvas size
     win.ContentArea.Parent = frame
 
     local contentListLayout = Instance.new("UIListLayout")
     contentListLayout.Padding = UDim.new(0, 5)
     contentListLayout.Parent = win.ContentArea
     contentListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        win.ContentArea.CanvasSize = UDim2.new(0, 0, 0, contentListLayout.AbsoluteContentSize.Y)
+        local absSize = contentListLayout.AbsoluteContentSize.Y
+        win.ContentArea.CanvasSize = UDim2.new(0, 0, 0, math.max(100, absSize)) -- Ensure minimum height
     end)
 
     function win:CreateTab(tabConfig)
@@ -131,12 +132,12 @@ function ui:CreateWindow(config)
         tabConfig.Imageid = tabConfig.Imageid or ""
 
         local tabButton = Instance.new("TextButton")
-        tabButton.Size = UDim2.new(0, 80, 0, 30) -- Reduced tab size
+        tabButton.Size = UDim2.new(0, 80, 0, 30)
         tabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         tabButton.BackgroundTransparency = 0.2
         tabButton.Text = tabConfig.Name
         tabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-        tabButton.TextSize = 14 -- Smaller text size
+        tabButton.TextSize = 14
         tabButton.Font = Enum.Font.GothamBold
         tabButton.AutoButtonColor = false
         tabButton.Parent = self.TabContainer
@@ -144,7 +145,6 @@ function ui:CreateWindow(config)
         tabButton.TextXAlignment = Enum.TextXAlignment.Center
         tabButton.TextYAlignment = Enum.TextYAlignment.Center
 
-        -- Add image to tab button if Imageid is provided
         if tabConfig.Imageid ~= "" then
             local tabImage = Instance.new("ImageLabel")
             tabImage.Size = UDim2.new(0, 20, 0, 20)
@@ -156,7 +156,7 @@ function ui:CreateWindow(config)
         end
 
         local tabContent = Instance.new("Frame")
-        tabContent.Size = UDim2.new(1, 0, 0, 0) -- Height will adjust dynamically
+        tabContent.Size = UDim2.new(1, 0, 0, 0)
         tabContent.BackgroundTransparency = 1
         tabContent.Visible = false
         tabContent.Parent = self.ContentArea
@@ -187,7 +187,6 @@ function ui:CreateWindow(config)
             Content = tabContent
         }
 
-        -- Auto-select first tab
         if not self.CurrentTab then
             tabButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
             tabButton.TextColor3 = Color3.new(1, 1, 1)
@@ -195,7 +194,6 @@ function ui:CreateWindow(config)
             self.CurrentTab = tabContent
         end
 
-        -- UI Element Creation Functions
         function tabContent:CreateButton(btnConfig)
             btnConfig = btnConfig or {}
             btnConfig.Name = btnConfig.Name or "Button"
@@ -217,7 +215,6 @@ function ui:CreateWindow(config)
                 btnConfig.Callfunction()
             end)
 
-            -- Hover effect
             button.MouseEnter:Connect(function()
                 TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
             end)
@@ -260,9 +257,7 @@ function ui:CreateWindow(config)
             local state = false
             toggle.MouseButton1Click:Connect(function()
                 state = not state
-                TweenService:Create(toggle, TweenInfo.new(0.2), {
-                    BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
-                }):Play()
+                toggle.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
                 toggleConfig.Callfunction(state)
             end)
 
@@ -476,6 +471,13 @@ function ui:CreateWindow(config)
 
         return tabContent
     end
+
+    -- Cleanup on screenGui destruction
+    screenGui.Destroying:Connect(function()
+        for _, tabData in pairs(win.Tabs) do
+            tabData.Button.MouseButton1Click:Disconnect()
+        end
+    end)
 
     return win
 end
