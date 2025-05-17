@@ -194,7 +194,9 @@ function ui:CreateWindow(config)
             self.CurrentTab = tabContent
         end
 
-        function tabContent:CreateButton(btnConfig)
+        local tab = {}
+
+        function tab:CreateButton(btnConfig)
             btnConfig = btnConfig or {}
             btnConfig.Name = btnConfig.Name or "Button"
             btnConfig.Flag = btnConfig.Flag or "Button"
@@ -208,7 +210,7 @@ function ui:CreateWindow(config)
             button.TextColor3 = Color3.new(1, 1, 1)
             button.TextSize = 14
             button.Font = Enum.Font.Gotham
-            button.Parent = self
+            button.Parent = tabContent
             Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
 
             button.MouseButton1Click:Connect(function()
@@ -225,7 +227,7 @@ function ui:CreateWindow(config)
             return button
         end
 
-        function tabContent:CreateToggle(toggleConfig)
+        function tab:CreateToggle(toggleConfig)
             toggleConfig = toggleConfig or {}
             toggleConfig.Name = toggleConfig.Name or "Toggle"
             toggleConfig.Flag = toggleConfig.Flag or "Toggle"
@@ -234,7 +236,7 @@ function ui:CreateWindow(config)
             local toggleFrame = Instance.new("Frame")
             toggleFrame.Size = UDim2.new(1, -10, 0, 30)
             toggleFrame.BackgroundTransparency = 1
-            toggleFrame.Parent = self
+            toggleFrame.Parent = tabContent
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.8, 0, 1, 0)
@@ -264,7 +266,7 @@ function ui:CreateWindow(config)
             return toggleFrame
         end
 
-        function tabContent:CreateDropdown(dropConfig)
+        function tab:CreateDropdown(dropConfig)
             dropConfig = dropConfig or {}
             dropConfig.Name = dropConfig.Name or "Dropdown"
             dropConfig.Flag = dropConfig.Flag or "Dropdown"
@@ -275,7 +277,7 @@ function ui:CreateWindow(config)
             local dropdownFrame = Instance.new("Frame")
             dropdownFrame.Size = UDim2.new(1, -10, 0, 30)
             dropdownFrame.BackgroundTransparency = 1
-            dropdownFrame.Parent = self
+            dropdownFrame.Parent = tabContent
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.8, 0, 1, 0)
@@ -306,6 +308,7 @@ function ui:CreateWindow(config)
             dropdownMenu.BackgroundTransparency = 0.2
             dropdownMenu.Visible = false
             dropdownMenu.Parent = dropdownFrame
+            dropdownMenu.ZIndex = 10 -- Make sure it appears on top
             Instance.new("UICorner", dropdownMenu).CornerRadius = UDim.new(0, 6)
 
             local uiListLayout = Instance.new("UIListLayout")
@@ -314,7 +317,15 @@ function ui:CreateWindow(config)
 
             local selected = dropConfig.Muti and {} or dropConfig.Option[1]
             local function updateLabel()
-                label.Text = dropConfig.Name .. ": " .. (dropConfig.Muti and table.concat(selected, ", ") or selected)
+                if dropConfig.Muti then
+                    if #selected == 0 then
+                        label.Text = dropConfig.Name
+                    else
+                        label.Text = dropConfig.Name .. ": " .. table.concat(selected, ", ")
+                    end
+                else
+                    label.Text = dropConfig.Name .. ": " .. selected
+                end
             end
             updateLabel()
 
@@ -328,12 +339,14 @@ function ui:CreateWindow(config)
                 optionBtn.TextSize = 14
                 optionBtn.Font = Enum.Font.Gotham
                 optionBtn.Parent = dropdownMenu
+                optionBtn.ZIndex = 10 -- Make sure it appears on top
                 Instance.new("UICorner", optionBtn).CornerRadius = UDim.new(0, 4)
 
                 optionBtn.MouseButton1Click:Connect(function()
                     if dropConfig.Muti then
-                        if table.find(selected, option) then
-                            table.remove(selected, table.find(selected, option))
+                        local index = table.find(selected, option)
+                        if index then
+                            table.remove(selected, index)
                         else
                             table.insert(selected, option)
                         end
@@ -354,7 +367,7 @@ function ui:CreateWindow(config)
             return dropdownFrame
         end
 
-        function tabContent:CreateSlide(slideConfig)
+        function tab:CreateSlide(slideConfig)
             slideConfig = slideConfig or {}
             slideConfig.Name = slideConfig.Name or "Slider"
             slideConfig.Flag = slideConfig.Flag or "Slider"
@@ -366,7 +379,7 @@ function ui:CreateWindow(config)
             local sliderFrame = Instance.new("Frame")
             sliderFrame.Size = UDim2.new(1, -10, 0, 50)
             sliderFrame.BackgroundTransparency = 1
-            sliderFrame.Parent = self
+            sliderFrame.Parent = tabContent
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(1, 0, 0, 20)
@@ -397,6 +410,16 @@ function ui:CreateWindow(config)
             slider.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     dragging = true
+                    
+                    -- Update on initial click
+                    local mouseX = input.Position.X
+                    local sliderPos = slider.AbsolutePosition.X
+                    local sliderWidth = slider.AbsoluteSize.X
+                    local ratio = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
+                    value = slideConfig.Min + math.floor(ratio * (slideConfig.Max - slideConfig.Min) / slideConfig.Add) * slideConfig.Add
+                    fill.Size = UDim2.new(ratio, 0, 1, 0)
+                    label.Text = slideConfig.Name .. ": " .. value
+                    slideConfig.Callfunction(value)
                 end
             end)
             slider.InputEnded:Connect(function(input)
@@ -410,8 +433,7 @@ function ui:CreateWindow(config)
                     local sliderPos = slider.AbsolutePosition.X
                     local sliderWidth = slider.AbsoluteSize.X
                     local ratio = math.clamp((mouseX - sliderPos) / sliderWidth, 0, 1)
-                    value = math.floor(slideConfig.Min + ratio * (slideConfig.Max - slideConfig.Min))
-                    value = math.floor(value / slideConfig.Add) * slideConfig.Add
+                    value = slideConfig.Min + math.floor(ratio * (slideConfig.Max - slideConfig.Min) / slideConfig.Add) * slideConfig.Add
                     fill.Size = UDim2.new(ratio, 0, 1, 0)
                     label.Text = slideConfig.Name .. ": " .. value
                     slideConfig.Callfunction(value)
@@ -421,7 +443,7 @@ function ui:CreateWindow(config)
             return sliderFrame
         end
 
-        function tabContent:CreateInput(inputConfig)
+        function tab:CreateInput(inputConfig)
             inputConfig = inputConfig or {}
             inputConfig.Name = inputConfig.Name or "Input"
             inputConfig.Flag = inputConfig.Flag or "Input"
@@ -432,7 +454,7 @@ function ui:CreateWindow(config)
             local inputFrame = Instance.new("Frame")
             inputFrame.Size = UDim2.new(1, -10, 0, 30)
             inputFrame.BackgroundTransparency = 1
-            inputFrame.Parent = self
+            inputFrame.Parent = tabContent
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.4, 0, 1, 0)
@@ -469,7 +491,7 @@ function ui:CreateWindow(config)
             return inputFrame
         end
 
-        return tabContent
+        return tab
     end
 
     -- Cleanup on screenGui destruction
